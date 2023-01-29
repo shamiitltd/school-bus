@@ -104,6 +104,8 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
       body:currentlocationData == null
           ? const Center(child: Text("Loading..."),)
           :GoogleMap(
+        myLocationButtonEnabled: true,
+        myLocationEnabled: true,
         initialCameraPosition: CameraPosition(
             target: sourceLocation,
             zoom: zoomMap

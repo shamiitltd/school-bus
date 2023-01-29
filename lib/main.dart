@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:school_bus/order_traking_page.dart';
+import 'package:school_bus/distduration.dart';
+
 
 void main() {
   runApp(const MyApp());
@@ -21,7 +22,7 @@ class MyApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      home: const OrderTrackingPage(),
+      home: OrderTrackingPage(),
     );
   }
 }
