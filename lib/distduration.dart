@@ -42,26 +42,28 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
       });
     });
     googleMapController = await _controller.future;
-    location.onLocationChanged.listen((newlocation) {
-      setState(() async {
+    location.onLocationChanged.listen((newlocation) async{
+      setState(()  {
         currentlocationData = newlocation;
-        if(focusLiveLocation){
-          googleMapController.animateCamera(
-              CameraUpdate.newCameraPosition(
-                  CameraPosition(
-                      zoom: zoomMap,
-                      target: LatLng(currentlocationData!.latitude!, currentlocationData!.longitude!)
-                  )
-              )
-          );
-        }
-        final directions = await DirectionsRepository()
-            .getDirections(origin: LatLng(currentlocationData!.latitude!, currentlocationData!.longitude!), destination: destination);
-        setState(() {
-          infoUpdate = true;
-          _info = directions;
-        });
       });
+      if(focusLiveLocation){
+        googleMapController.animateCamera(
+            CameraUpdate.newCameraPosition(
+                CameraPosition(
+                    zoom: zoomMap,
+                    target: LatLng(currentlocationData!.latitude!, currentlocationData!.longitude!)
+                )
+            )
+        );
+      }
+
+      final directions = await DirectionsRepository()
+          .getDirections(origin: LatLng(currentlocationData!.latitude!, currentlocationData!.longitude!), destination: destination);
+      setState(() {
+        infoUpdate = true;
+        _info = directions;
+      });
+
     });
   }
 
