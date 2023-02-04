@@ -91,17 +91,34 @@ class _LoginWidgetState extends State<LoginWidget> {
               const SizedBox(height: 24),
               GestureDetector(
                 child: Text(
-                  'Forgot Password?',
+                  'Register New User',
                   style: TextStyle(
-                    decoration: TextDecoration.underline,
-                    color: Theme.of(context).colorScheme.secondary,
-                    fontSize: 20
+                      decoration: TextDecoration.underline,
+                      color: Theme.of(context).colorScheme.secondary,
+                      fontSize: 20
                   ),
                 ),
                 onTap: (){
                   Navigator.of(context).push(MaterialPageRoute(
                     builder: (context)=> const RegisterUser(),
                     // builder: (context)=> const ForgotPassword(),
+                  ));
+                },
+              ),
+              const SizedBox(height: 24),
+              GestureDetector(
+                child: Text(
+                  'Forgot Password?',
+                  style: TextStyle(
+                      decoration: TextDecoration.underline,
+                      color: Theme.of(context).colorScheme.secondary,
+                      fontSize: 20
+                  ),
+                ),
+                onTap: (){
+                  Navigator.of(context).push(MaterialPageRoute(
+                    // builder: (context)=> const RegisterUser(),
+                    builder: (context)=> const ForgotPassword(),
                   ));
                 },
               ),

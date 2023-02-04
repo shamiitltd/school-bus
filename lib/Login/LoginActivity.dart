@@ -24,10 +24,13 @@ class _LoginActivityState extends State<LoginActivity> {
 
 
   Future checkEmailVerified() async{
-    await FirebaseAuth.instance.currentUser!.reload();
-    setState(() {
-      isEmailVerified = FirebaseAuth.instance.currentUser!.emailVerified;
-    });
+    var user = await FirebaseAuth.instance.currentUser;
+    if(user != null) {
+      user.reload();
+      setState(() {
+        isEmailVerified = user.emailVerified;
+      });
+    }
   }
 
   @override
