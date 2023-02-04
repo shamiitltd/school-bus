@@ -4,6 +4,7 @@ import 'package:email_validator/email_validator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:location/location.dart';
 import 'package:school_bus/Login/LoginWidget.dart';
 import 'package:school_bus/Login/Utils.dart';
 
@@ -366,12 +367,21 @@ class _RegisterUserState extends State<RegisterUser> {
       User? user = result.user;
       user?.updateDisplayName(displayName);
       print('User created: ${user?.uid}');
-      Utils().setMyMapSettings(_selectedYourRoute, true);
+      String iconUrl = _selectedYourPost=='Driver'?busIconUrl:personIconUrl;
+      Utils().setMyMapSettings(iconUrl, _selectedYourRoute, true);
       if(_selectedYourPost == 'Driver' || _selectedYourPost == 'Director') {
         Utils().setUserInfo(_selectedYourPost, phoneNumber, displayName, true);
       }else{
         Utils().setUserInfo(_selectedYourPost, phoneNumber, displayName, false);
       }
+      Location location = Location();
+      location.getLocation().then((value) {
+        setState(() {
+          LocationData? currentLocationData = value;
+          Utils().setMyCoordinates(currentLocationData.latitude!.toString(), currentLocationData.longitude!.toString());
+        });
+      });
+
       // ignore: use_build_context_synchronously
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (e) {

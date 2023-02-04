@@ -65,13 +65,16 @@ class Utils {
         error) {});
   }
 
-  void setMyMapSettings(String route, bool trackMe) async {
+  void setMyMapSettings(String iconUrl, String route, bool trackMe) async {
     final databaseReference =
     FirebaseDatabase.instance.ref().child("users/${user?.uid}");
     Map<String, dynamic> updateValues = {
       "route": route,
       "trackMe": trackMe,
     };
+    if(iconUrl.isNotEmpty) {
+      updateValues["image"]=iconUrl;
+    }
     await databaseReference.update(updateValues).then((_) {}).catchError((
         error) {});
   }
