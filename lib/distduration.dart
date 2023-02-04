@@ -47,7 +47,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   void initState() {
     super.initState();
     WidgetsFlutterBinding.ensureInitialized();
-    getCoordinatesByRootId(1);
+    getCoordinatesByRootId();
     getCurrentLocation();
     final user = this.user;
     if(user != null){
@@ -63,20 +63,20 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
     googleMapController.dispose();
   }
 
-  Future getCoordinatesByRootId(dynamic rootId) async {
+  Future getCoordinatesByRootId() async {
     DatabaseReference starCountRef = FirebaseDatabase.instance.ref('users');
     await starCountRef.onValue.listen((DatabaseEvent event) {
       Map<dynamic, dynamic> data = event.snapshot.value as Map<dynamic, dynamic>;
       allUserCompleteData.clear();
       data.forEach((key, value) {
-        if (value['route'] == rootId && value['trackMe'] == true) {
+        if (value['route'] == data[key]['route']) {
           if(key == currentUid){
             currentUserdata = value;
             final user = this.user;
             if(user != null) {
               currentUid=user.uid;
             }
-          }else{
+          }else if(value['trackMe'] == true){//value['trackMe'] == true
             allUserCompleteData.add({key: value});
           }
         }
