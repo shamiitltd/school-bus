@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+import 'package:school_bus/Login/Utils.dart';
 import 'package:school_bus/constant.dart';
 import 'package:http/http.dart' as http;
 
@@ -23,10 +24,11 @@ class OrderTrackingPage extends StatefulWidget {
 class OrderTrackingPageState extends State<OrderTrackingPage> {
   late GoogleMapController googleMapController;
   final Completer<GoogleMapController> _controller = Completer();
-  final user = FirebaseAuth.instance.currentUser!;
+  Location location = Location();
+  final user = FirebaseAuth.instance.currentUser;
   late LatLng destination;
   LocationData? currentLocationData;
-
+  late StreamSubscription _locationSubscription;
   List<LatLng> polylineCoordinates = [];
   late Directions _info;
   bool infoUpdate = false;
@@ -47,7 +49,18 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
     WidgetsFlutterBinding.ensureInitialized();
     getCoordinatesByRootId(1);
     getCurrentLocation();
-    currentUid=user.uid;
+    final user = this.user;
+    if(user != null){
+      currentUid=user.uid;
+    }
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    _locationSubscription.cancel();
+    googleMapController.dispose();
   }
 
   Future getCoordinatesByRootId(dynamic rootId) async {
@@ -59,7 +72,10 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
         if (value['route'] == rootId && value['trackMe'] == true) {
           if(key == currentUid){
             currentUserdata = value;
-            currentUid=user.uid;
+            final user = this.user;
+            if(user != null) {
+              currentUid=user.uid;
+            }
           }else{
             allUserCompleteData.add({key: value});
           }
@@ -69,40 +85,19 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
     });
   }
 
-  void setCoordinatesByEmail(String latitude, String longitude, bool trackMe) async {
-    final databaseReference =
-    FirebaseDatabase.instance.ref().child("users/${user.uid}");
-    Map<String, dynamic> updateValues = {
-      "post": 'Driver', //Student, Teacher, Principle
-      "phone": user.phoneNumber,
-      "route": 1,
-      "email": user.email!,
-      "name": user.displayName!,
-      "latitude": latitude,
-      "longitude": longitude,
-      "mapAccess":'full',//'default'
-      "trackMe":trackMe,
-    };
-    await databaseReference.update(updateValues).then((_) {
-      print("Values updated successfully");
-    }).catchError((error) {
-      print("Error updating values: $error");
-    });
-  }
 
   void getCurrentLocation() async {
-    Location location = Location();
     location.getLocation().then((value) {
       setState(() {
         currentLocationData = value;
       });
     });
+
     googleMapController = await _controller.future;
-    location.onLocationChanged.listen((newlocation) async {
+    _locationSubscription = location.onLocationChanged.listen((newlocation) async {
       setState(() {
         currentLocationData = newlocation;
-        setCoordinatesByEmail(currentLocationData!.latitude!.toString(),
-            currentLocationData!.longitude!.toString(), true);
+        Utils().setMyCoordinates(currentLocationData!.latitude!.toString(), currentLocationData!.longitude!.toString());
         updateCoordinates();
       });
       if (focusLiveLocation) {

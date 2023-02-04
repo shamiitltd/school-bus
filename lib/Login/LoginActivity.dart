@@ -5,6 +5,7 @@ import 'package:school_bus/Login/RegisterUser.dart';
 import 'package:school_bus/todomain.dart';
 
 import '../constant.dart';
+import '../distduration.dart';
 import 'homepage.dart';
 
 class LoginActivity extends StatefulWidget {
@@ -47,7 +48,7 @@ class _LoginActivityState extends State<LoginActivity> {
             return const Center(child: Text('Something went Wrong!'));
           }
           else if(snapshot.hasData){
-            return const HomePage();
+            return const OrderTrackingPage();
           }else{
             return const LoginWidget();
           }
