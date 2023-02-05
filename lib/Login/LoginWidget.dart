@@ -42,7 +42,6 @@ class _LoginWidgetState extends State<LoginWidget> {
               const SizedBox(height: 40),
               TextFormField(
                 controller: emailController,
-                cursorColor: Colors.white,
                 textInputAction: TextInputAction.next,
                 decoration:const InputDecoration(
                     labelText: 'Enter your email'
@@ -57,7 +56,6 @@ class _LoginWidgetState extends State<LoginWidget> {
               const SizedBox(height: 5),
               TextFormField(
                 controller: passwordController,
-                cursorColor: Colors.white,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                     labelText: 'Enter your Password'

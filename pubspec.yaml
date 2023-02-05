@@ -103,4 +103,8 @@ flutter:
   # see https://flutter.dev/custom-fonts/#from-packages
   assets:
     - assets/bus.png
+    - assets/focus.png
+    - assets/invisible.png
+    - assets/notfocus.png
     - assets/person.png
+    - assets/visible.png

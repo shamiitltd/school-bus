@@ -34,8 +34,8 @@ class _RegisterUserState extends State<RegisterUser> {
   void addDropDownMenu() async {
     List<String> postList = [];
     List<String> routeList = [];
-
     final databaseReference = FirebaseDatabase.instance.ref();
+
     for (var i = 0; i < countryNames.length; i++) {
       _countries[countryNames[i]] = '+${countryAreaCodes[i]}';
     }

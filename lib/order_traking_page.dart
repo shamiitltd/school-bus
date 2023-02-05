@@ -6,14 +6,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:school_bus/constant.dart';
 
-class OrderTrackingPage extends StatefulWidget {
-  const OrderTrackingPage({Key? key}) : super(key: key);
+class BasicMapLoad extends StatefulWidget {
+  const BasicMapLoad({Key? key}) : super(key: key);
 
   @override
-  State<OrderTrackingPage> createState() => OrderTrackingPageState();
+  State<BasicMapLoad> createState() => BasicMapLoadState();
 }
 
-class OrderTrackingPageState extends State<OrderTrackingPage> {
+class BasicMapLoadState extends State<BasicMapLoad> {
   final Completer<GoogleMapController> _controller = Completer();
 
   static const LatLng sourceLocation = LatLng(37.411, -122.072);

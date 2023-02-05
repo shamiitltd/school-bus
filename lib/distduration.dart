@@ -11,6 +11,7 @@ import 'package:school_bus/Login/Utils.dart';
 import 'package:school_bus/constant.dart';
 import 'package:http/http.dart' as http;
 
+import 'Login/countryData.dart';
 import 'directions_model.dart';
 import 'directions_repository.dart';
 
@@ -29,6 +30,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   late LatLng destination;
   LocationData? currentLocationData;
   late StreamSubscription _locationSubscription;
+  late StreamSubscription _firebaseSubscription;
   List<LatLng> polylineCoordinates = [];
   late Directions _info;
   bool infoUpdate = false;
@@ -40,51 +42,76 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   Map<dynamic, dynamic> selectedUserdata = <dynamic, dynamic>{};
   String currentUid = '';
   String selectedUid = '';
+  String _selectedRoute = '';
+  bool _mounted = true;
 
-
+  void loadRouteInfo() async {
+    List<String> routeList = [];
+    final databaseReference = FirebaseDatabase.instance.ref();
+    await databaseReference
+        .child("routes")
+        .onValue
+        .listen((DatabaseEvent event) {
+      Map<dynamic, dynamic> data =
+          event.snapshot.value as Map<dynamic, dynamic>;
+      data.forEach((key, value) {
+        routeList.add(value);
+      });
+      setState(() {
+        userRoute = routeList;
+        _selectedRoute = userRoute[0];
+      });
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsFlutterBinding.ensureInitialized();
+    loadRouteInfo();
     getCoordinatesByRootId();
     getCurrentLocation();
     final user = this.user;
-    if(user != null){
-      currentUid=user.uid;
+    if (user != null) {
+      currentUid = user.uid;
     }
   }
 
   @override
   void dispose() {
-    // TODO: implement dispose
-    super.dispose();
     _locationSubscription.cancel();
     googleMapController.dispose();
+    _firebaseSubscription.cancel();
+    _mounted = false;
+    super.dispose();
   }
 
   Future getCoordinatesByRootId() async {
     DatabaseReference starCountRef = FirebaseDatabase.instance.ref('users');
-    await starCountRef.onValue.listen((DatabaseEvent event) {
-      Map<dynamic, dynamic> data = event.snapshot.value as Map<dynamic, dynamic>;
+    _firebaseSubscription = await starCountRef.onValue.listen((DatabaseEvent event) {
+      Map<dynamic, dynamic> data =
+          event.snapshot.value as Map<dynamic, dynamic>;
       allUserCompleteData.clear();
       data.forEach((key, value) {
         if (value['route'] == data[key]['route']) {
-          if(key == currentUid){
+          if (key == currentUid) {
             currentUserdata = value;
             final user = this.user;
-            if(user != null) {
-              currentUid=user.uid;
+            if (user != null) {
+              currentUid = user.uid;
             }
-          }else if(value['trackMe'] == true){//value['trackMe'] == true
+          } else if (value['trackMe'] == true) {
+            //value['trackMe'] == true
             allUserCompleteData.add({key: value});
           }
         }
       });
-      setState(() {});
+      if (_mounted) {
+        setState(() {
+        });
+      }
     });
   }
-
 
   void getCurrentLocation() async {
     location.getLocation().then((value) {
@@ -94,10 +121,12 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
     });
 
     googleMapController = await _controller.future;
-    _locationSubscription = location.onLocationChanged.listen((newlocation) async {
+    _locationSubscription =
+        location.onLocationChanged.listen((newlocation) async {
       setState(() {
         currentLocationData = newlocation;
-        Utils().setMyCoordinates(currentLocationData!.latitude!.toString(), currentLocationData!.longitude!.toString());
+        Utils().setMyCoordinates(currentLocationData!.latitude!.toString(),
+            currentLocationData!.longitude!.toString());
         updateCoordinates();
       });
       if (focusLiveLocation) {
@@ -107,10 +136,10 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                 target: LatLng(currentLocationData!.latitude!,
                     currentLocationData!.longitude!))));
       }
-      if(selectedUid.isNotEmpty){
+      if (selectedUid.isNotEmpty) {
         final directions = await DirectionsRepository().getDirections(
-            origin: LatLng(
-                currentLocationData!.latitude!, currentLocationData!.longitude!),
+            origin: LatLng(currentLocationData!.latitude!,
+                currentLocationData!.longitude!),
             destination: destination);
         setState(() {
           infoUpdate = true;
@@ -121,7 +150,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   }
 
   void getPolyPoints() async {
-    if(selectedUid.isEmpty) {
+    if (selectedUid.isEmpty) {
       return;
     }
     PolylinePoints polylinePoints = PolylinePoints();
@@ -146,11 +175,11 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
     });
   }
 
-
-  void updateCoordinates() async{
-    if(currentUid.isEmpty || currentUserdata['image'] == null) return;
-    if(selectedUid.isNotEmpty){
-      var val = allUserCompleteData.firstWhere((element) => element.containsKey(selectedUid));
+  void updateCoordinates() async {
+    if (currentUid.isEmpty || currentUserdata['image'] == null) return;
+    if (selectedUid.isNotEmpty) {
+      var val = allUserCompleteData
+          .firstWhere((element) => element.containsKey(selectedUid));
       selectedUserdata = val[selectedUid];
       destination = LatLng(double.parse(selectedUserdata['latitude']),
           double.parse(selectedUserdata['longitude']));
@@ -183,8 +212,8 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
         markers.add(
           Marker(
             onTap: () {
-              selectedUid=key;
-              selectedUserdata=value;
+              selectedUid = key;
+              selectedUserdata = value;
               destination = LatLng(double.parse(value['latitude']),
                   double.parse(value['longitude']));
               getPolyPoints();
@@ -201,7 +230,6 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                 double.parse(value['longitude'])),
           ),
         );
-
       });
     });
     setState(() {});
@@ -210,24 +238,82 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   @override
   Widget build(BuildContext context) {
     // getPolyPoints();
+    if (currentUid.isNotEmpty && currentUserdata['trackMe'] != null) {
+      setState(() {
+        iconVisible = currentUserdata['trackMe'];
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Track order",
-          style: TextStyle(color: Colors.black, fontSize: 16),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                'Route:',
+                style: TextStyle(color: Colors.black, fontSize: 20.0),
+              ),
+              flex: 2,
+            ),
+            Expanded(
+              flex: 2,
+              child: _selectedRoute.isNotEmpty ?
+              DropdownButton(
+                value: _selectedRoute,
+                items: userRoute.map((route) {
+                  return DropdownMenuItem(
+                    value: route,
+                    child: Text(route),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedRoute = value!;
+                    Utils().setMyMapSettings(currentUserdata['image'],
+                        _selectedRoute, currentUserdata['trackMe']);
+                  });
+                },
+              ): Text('Loading..'),
+            ),
+          ],
         ),
         actions: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Text(
-                focusLiveLocation ? 'Focus' : 'No Focus',
+                iconVisible ? 'Visible' : 'InVisible',
                 style: TextStyle(color: Colors.black, fontSize: 20.0),
               ),
               SizedBox(
                 height: 12.0,
               ),
-              CupertinoSwitch(
+              Switch(
+                trackColor: MaterialStateProperty.all(Colors.black38),
+                activeColor: Colors.green.withOpacity(0.4),
+                inactiveThumbColor: Colors.red.withOpacity(0.4),
+                activeThumbImage: const AssetImage('assets/visible.png'),
+                inactiveThumbImage: const AssetImage('assets/invisible.png'),
+                value: iconVisible,
+                onChanged: (value) {
+                  setState(() {
+                    iconVisible = value;
+                    currentUserdata['trackMe'] = value;
+                    Utils().setMyMapSettings(currentUserdata['image'],
+                        currentUserdata['route'], value);
+                  });
+                },
+              ),
+              SizedBox(
+                height: 12.0,
+              ),
+              Switch(
+                trackColor: MaterialStateProperty.all(Colors.black38),
+                activeColor: Colors.green.withOpacity(0.4),
+                inactiveThumbColor: Colors.red.withOpacity(0.4),
+                activeThumbImage: const AssetImage('assets/focus.png'),
+                inactiveThumbImage: const AssetImage('assets/notfocus.png'),
                 value: focusLiveLocation,
                 onChanged: (value) {
                   setState(() {
@@ -241,62 +327,62 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
       ),
       body: currentLocationData == null
           ? const Center(
-        child: Text("Loading..."),
-      )
+              child: Text("Loading..."),
+            )
           : Stack(
-        alignment: Alignment.center,
-        children: [
-          GoogleMap(
-            scrollGesturesEnabled: true,
-            zoomGesturesEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            initialCameraPosition: CameraPosition(
-                target: LatLng(currentLocationData!.latitude!,
-                    currentLocationData!.longitude!),
-                zoom: zoomMap),
-            polylines: {
-              Polyline(
-                  polylineId: PolylineId("route"),
-                  points: polylineCoordinates,
-                  color: primaryColor,
-                  width: 6)
-            },
-            markers: markers,
-            onMapCreated: (mapController) {
-              _controller.complete(mapController);
-            },
-          ),
-          if (infoUpdate)
-            Positioned(
-              top: 20.0,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 6.0,
-                  horizontal: 12.0,
+              alignment: Alignment.center,
+              children: [
+                GoogleMap(
+                  scrollGesturesEnabled: true,
+                  zoomGesturesEnabled: true,
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: false,
+                  initialCameraPosition: CameraPosition(
+                      target: LatLng(currentLocationData!.latitude!,
+                          currentLocationData!.longitude!),
+                      zoom: zoomMap),
+                  polylines: {
+                    Polyline(
+                        polylineId: PolylineId("route"),
+                        points: polylineCoordinates,
+                        color: primaryColor,
+                        width: 6)
+                  },
+                  markers: markers,
+                  onMapCreated: (mapController) {
+                    _controller.complete(mapController);
+                  },
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.yellowAccent,
-                  borderRadius: BorderRadius.circular(20.0),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black26,
-                      offset: Offset(0, 2),
-                      blurRadius: 6.0,
-                    )
-                  ],
-                ),
-                child: Text(
-                  '${_info.totalDistance}, ${_info.totalDuration}',
-                  style: const TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.w600,
+                if (infoUpdate)
+                  Positioned(
+                    top: 20.0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 6.0,
+                        horizontal: 12.0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.yellowAccent,
+                        borderRadius: BorderRadius.circular(20.0),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            offset: Offset(0, 2),
+                            blurRadius: 6.0,
+                          )
+                        ],
+                      ),
+                      child: Text(
+                        '${_info.totalDistance}, ${_info.totalDuration}',
+                        style: const TextStyle(
+                          fontSize: 18.0,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+              ],
             ),
-        ],
-      ),
     );
   }
 }
