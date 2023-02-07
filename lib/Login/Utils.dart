@@ -71,6 +71,7 @@ class Utils {
     Map<String, dynamic> updateValues = {
       "route": route,
       "trackMe": trackMe,
+      "routeAccess":false,
     };
     if(image.isNotEmpty) {
       updateValues["image"]=image;

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -29,7 +28,6 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   final user = FirebaseAuth.instance.currentUser;
   late LatLng destination;
   LocationData? currentLocationData;
-  late StreamSubscription _locationSubscription;
   late StreamSubscription _firebaseSubscription;
   List<LatLng> polylineCoordinates = [];
   late Directions _info;
@@ -48,7 +46,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   void loadRouteInfo() async {
     List<String> routeList = [];
     final databaseReference = FirebaseDatabase.instance.ref();
-    await databaseReference
+    databaseReference
         .child("routes")
         .onValue
         .listen((DatabaseEvent event) {
@@ -79,8 +77,6 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
 
   @override
   void dispose() {
-    _locationSubscription.cancel();
-    googleMapController.dispose();
     _firebaseSubscription.cancel();
     _mounted = false;
     super.dispose();
@@ -88,65 +84,66 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
 
   Future getCoordinatesByRootId() async {
     DatabaseReference starCountRef = FirebaseDatabase.instance.ref('users');
-    _firebaseSubscription = await starCountRef.onValue.listen((DatabaseEvent event) {
+    _firebaseSubscription = starCountRef.onValue.listen((DatabaseEvent event) {
       Map<dynamic, dynamic> data =
           event.snapshot.value as Map<dynamic, dynamic>;
       allUserCompleteData.clear();
       data.forEach((key, value) {
-        if (value['route'] == data[key]['route']) {
+        if (value['route'] == data[user?.uid]['route']) {
           if (key == currentUid) {
             currentUserdata = value;
-            final user = this.user;
-            if (user != null) {
-              currentUid = user.uid;
-            }
           } else if (value['trackMe'] == true) {
-            //value['trackMe'] == true
             allUserCompleteData.add({key: value});
           }
         }
       });
       if (_mounted) {
-        setState(() {
-        });
+        setState(() {});
       }
     });
   }
 
   void getCurrentLocation() async {
     location.getLocation().then((value) {
-      setState(() {
-        currentLocationData = value;
-      });
+      currentLocationData = value;
+      if (_mounted) {
+        setState(() {});
+      }
     });
 
     googleMapController = await _controller.future;
-    _locationSubscription =
-        location.onLocationChanged.listen((newlocation) async {
-      setState(() {
-        currentLocationData = newlocation;
-        Utils().setMyCoordinates(currentLocationData!.latitude!.toString(),
-            currentLocationData!.longitude!.toString());
-        updateCoordinates();
-      });
+    location.onLocationChanged.listen((newlocation) async {
+      currentLocationData = newlocation;
+      Utils().setMyCoordinates(currentLocationData!.latitude!.toString(),
+          currentLocationData!.longitude!.toString());
+      updateCoordinates();
       if (focusLiveLocation) {
         googleMapController.animateCamera(CameraUpdate.newCameraPosition(
             CameraPosition(
                 zoom: zoomMap,
                 target: LatLng(currentLocationData!.latitude!,
                     currentLocationData!.longitude!))));
+      }else if(selectedUid.isNotEmpty){
+        googleMapController.animateCamera(CameraUpdate.newCameraPosition(
+            CameraPosition(
+                zoom: zoomMap,
+                target: destination
+            )
+        ));
       }
       if (selectedUid.isNotEmpty) {
         final directions = await DirectionsRepository().getDirections(
             origin: LatLng(currentLocationData!.latitude!,
                 currentLocationData!.longitude!),
             destination: destination);
-        setState(() {
-          infoUpdate = true;
-          _info = directions;
-        });
+        infoUpdate = true;
+        _info = directions;
+      }
+      if (_mounted) {
+        setState(() {});
       }
     });
+    location.enableBackgroundMode(enable: true);
   }
 
   void getPolyPoints() async {
@@ -169,10 +166,11 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
         origin: LatLng(
             currentLocationData!.latitude!, currentLocationData!.longitude!),
         destination: destination);
-    setState(() {
-      infoUpdate = true;
-      _info = directions;
-    });
+    infoUpdate = true;
+    _info = directions;
+    if (_mounted) {
+      setState(() {});
+    }
   }
 
   void updateCoordinates() async {
@@ -232,14 +230,16 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
         );
       });
     });
-    setState(() {});
+    if (_mounted) {
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // getPolyPoints();
     if (currentUid.isNotEmpty && currentUserdata['trackMe'] != null) {
       setState(() {
+        _selectedRoute = currentUserdata['route'];
         iconVisible = currentUserdata['trackMe'];
       });
     }
@@ -249,32 +249,40 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
+            const Expanded(
+              flex: 2,
               child: Text(
-                'Route:',
+                'R:',
                 style: TextStyle(color: Colors.black, fontSize: 20.0),
               ),
-              flex: 2,
             ),
             Expanded(
               flex: 2,
-              child: _selectedRoute.isNotEmpty ?
-              DropdownButton(
-                value: _selectedRoute,
-                items: userRoute.map((route) {
-                  return DropdownMenuItem(
-                    value: route,
-                    child: Text(route),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedRoute = value!;
-                    Utils().setMyMapSettings(currentUserdata['image'],
-                        _selectedRoute, currentUserdata['trackMe']);
-                  });
-                },
-              ): Text('Loading..'),
+              child: _selectedRoute.isNotEmpty
+                  ? ((currentUserdata['post'] == 'Driver' ||
+                          currentUserdata['routeAccess'] == true)
+                      ? DropdownButton(
+                          value: _selectedRoute,
+                          items: userRoute.map((route) {
+                            return DropdownMenuItem(
+                              value: route,
+                              child: Text(route),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedRoute = value!;
+                              Utils().setMyMapSettings(currentUserdata['image'],
+                                  _selectedRoute, currentUserdata['trackMe']);
+                            });
+                          },
+                        )
+                      : Text(
+                          currentUserdata['route'],
+                          style: const TextStyle(
+                              color: Colors.black, fontSize: 20.0),
+                        ))
+                  : const Text('Loading..'),
             ),
           ],
         ),
@@ -284,9 +292,9 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
             children: <Widget>[
               Text(
                 iconVisible ? 'Visible' : 'InVisible',
-                style: TextStyle(color: Colors.black, fontSize: 20.0),
+                style: const TextStyle(color: Colors.black, fontSize: 20.0),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 12.0,
               ),
               Switch(
@@ -305,7 +313,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                   });
                 },
               ),
-              SizedBox(
+              const SizedBox(
                 height: 12.0,
               ),
               Switch(
@@ -343,7 +351,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                       zoom: zoomMap),
                   polylines: {
                     Polyline(
-                        polylineId: PolylineId("route"),
+                        polylineId: const PolylineId("route"),
                         points: polylineCoordinates,
                         color: primaryColor,
                         width: 6)
