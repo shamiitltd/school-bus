@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 
+import '../Login/Utils.dart';
 import '../constant.dart';
 
 class ZoomLevelPickerDialog extends StatefulWidget {
@@ -45,6 +46,34 @@ class ZoomLevelPickerDialogState extends State<ZoomLevelPickerDialog> {
             min: 0.0,
             max: 22.0,
           ),
+          const SizedBox(
+            height: 12.0,
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                iconVisible ? 'Visible' : 'InVisible',
+                style: const TextStyle(color: Colors.black, fontSize: 20.0),
+              ),
+              Switch(
+                trackColor: MaterialStateProperty.all(Colors.black38),
+                activeColor: Colors.green.withOpacity(0.4),
+                inactiveThumbColor: Colors.red.withOpacity(0.4),
+                activeThumbImage: const AssetImage('assets/visible.png'),
+                inactiveThumbImage: const AssetImage('assets/invisible.png'),
+                value: iconVisible,
+                onChanged: (value) {
+                  setState(() {
+                    iconVisible = value;
+                    Utils().setTraceMeSettings(value);
+                  });
+                },
+              ),
+
+            ],
+          )
+
         ],
       ),
       actions: [

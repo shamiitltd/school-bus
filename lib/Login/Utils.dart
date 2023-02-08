@@ -79,6 +79,15 @@ class Utils {
     await databaseReference.update(updateValues).then((_) {}).catchError((
         error) {});
   }
+  void setTraceMeSettings(bool trackMe) async {
+    final databaseReference =
+    FirebaseDatabase.instance.ref().child("users/${user?.uid}");
+    Map<String, dynamic> updateValues = {
+      "trackMe": trackMe,
+    };
+    await databaseReference.update(updateValues).then((_) {}).catchError((
+        error) {});
+  }
   void setUserInfo(String post,String phoneNumber,String displayName, bool mapAccess) async {
     final databaseReference =
     FirebaseDatabase.instance.ref().child("users/${user?.uid}");

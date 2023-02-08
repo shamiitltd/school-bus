@@ -56,10 +56,12 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
       data.forEach((key, value) {
         routeList.add(value);
       });
-      setState(() {
+      if(_mounted) {
+        setState(() {
         userRoute = routeList;
         _selectedRoute = userRoute[0];
       });
+      }
     });
   }
 
@@ -186,7 +188,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
           double.parse(selectedUserdata['longitude']));
       getPolyPoints();
     }
-    if (currentUserdata['image'] != null) {
+    if (currentUserdata['image'] != null && currentUserdata['trackMe']==true) {
       var url = Uri.parse(currentUserdata['image']);
       var request = await http.get(url);
       var dataBytes = request.bodyBytes;
@@ -198,6 +200,14 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
               currentUserdata['post'] == 'Driver'
                   ? busIconAsset
                   : personIconAsset)
+          .then((value) => locationMaker = value);
+    }
+    if (iconVisible==false){
+      BitmapDescriptor.fromAssetImage(
+          ImageConfiguration.empty,
+          currentUserdata['post'] == 'Driver'
+              ? busOffIconAsset
+              : personOffIconAsset)
           .then((value) => locationMaker = value);
     }
 
@@ -312,15 +322,29 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                         ))
                   : const Text('Loading..'),
             ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                '${distanceTravelled.toStringAsFixed(2)}Km',
+                style: const TextStyle(color: Colors.black, fontSize: 20.0),
+              ),
+            ),
           ],
         ),
         actions: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Text(
-                iconVisible ? 'Visible' : 'InVisible',
-                style: const TextStyle(color: Colors.black, fontSize: 20.0),
+              Text('Me',
+                style: TextStyle(color: focusLiveLocation ? Colors.green:Colors.black, fontSize: 20.0),
+              ),
+              const Text('/',
+                style: TextStyle(color: Colors.black, fontSize: 20.0),
+              ),
+              Text(selectedUid.isNotEmpty
+                    ? 'Dest'
+                    : 'None',
+                style: TextStyle(color: !focusLiveLocation ? Colors.red:Colors.black, fontSize: 20.0),
               ),
               const SizedBox(
                 height: 12.0,
@@ -329,38 +353,8 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                 trackColor: MaterialStateProperty.all(Colors.black38),
                 activeColor: Colors.green.withOpacity(0.4),
                 inactiveThumbColor: Colors.red.withOpacity(0.4),
-                activeThumbImage: const AssetImage('assets/visible.png'),
-                inactiveThumbImage: const AssetImage('assets/invisible.png'),
-                value: iconVisible,
-                onChanged: (value) {
-                  setState(() {
-                    iconVisible = value;
-                    currentUserdata['trackMe'] = value;
-                    Utils().setMyMapSettings(currentUserdata['image'],
-                        currentUserdata['route'], value);
-                  });
-                },
-              ),
-              const SizedBox(
-                height: 12.0,
-              ),
-              Text(
-                focusLiveLocation
-                    ? 'Me'
-                    : selectedUid.isNotEmpty
-                        ? 'Dest'
-                        : 'None',
-                style: const TextStyle(color: Colors.black, fontSize: 20.0),
-              ),
-              const SizedBox(
-                height: 12.0,
-              ),
-              Switch(
-                trackColor: MaterialStateProperty.all(Colors.black38),
-                activeColor: Colors.green.withOpacity(0.4),
-                inactiveThumbColor: Colors.red.withOpacity(0.4),
-                activeThumbImage: const AssetImage('assets/focus.png'),
-                inactiveThumbImage: const AssetImage('assets/notfocus.png'),
+                activeThumbImage: AssetImage(focusIcon),
+                inactiveThumbImage: AssetImage(noFocusIcon),
                 value: focusLiveLocation,
                 onChanged: (value) {
                   setState(() {
@@ -373,8 +367,13 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
         ],
       ),
       body: currentLocationData == null
-          ? const Center(
-              child: Text("Loading..."),
+          ? Center(
+              child: TextButton(
+                onPressed: () {
+                  getCurrentLocation();
+                },
+                child: const Text('Click here to Reload'),
+              ),
             )
           : Stack(
               alignment: Alignment.center,
