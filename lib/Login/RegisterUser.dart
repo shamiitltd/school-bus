@@ -366,8 +366,7 @@ class _RegisterUserState extends State<RegisterUser> {
           email: email, password: password);
       User? user = result.user;
       user?.updateDisplayName(displayName);
-      print('User created: ${user?.uid}');
-      String iconUrl = _selectedYourPost=='Driver'?busIconUrl:personIconUrl;
+      String iconUrl = '';
       Utils().setMyMapSettings(iconUrl, _selectedYourRoute, true);
       if(_selectedYourPost == 'Driver' || _selectedYourPost == 'Director') {
         Utils().setUserInfo(_selectedYourPost, phoneNumber, displayName, true);

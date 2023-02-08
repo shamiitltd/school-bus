@@ -9,6 +9,9 @@ import 'package:location/location.dart';
 import 'package:school_bus/Login/Utils.dart';
 import 'package:school_bus/constant.dart';
 import 'package:http/http.dart' as http;
+import 'package:school_bus/widget/ZoomPopup.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'Login/countryData.dart';
 import 'directions_model.dart';
@@ -33,6 +36,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   late Directions _info;
   bool infoUpdate = false;
 
+  BitmapDescriptor locationMaker = BitmapDescriptor.defaultMarker;
   Set<Marker> markers = {};
   Set<Map<dynamic, dynamic>> allUserCompleteData = {};
 
@@ -46,10 +50,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   void loadRouteInfo() async {
     List<String> routeList = [];
     final databaseReference = FirebaseDatabase.instance.ref();
-    databaseReference
-        .child("routes")
-        .onValue
-        .listen((DatabaseEvent event) {
+    databaseReference.child("routes").onValue.listen((DatabaseEvent event) {
       Map<dynamic, dynamic> data =
           event.snapshot.value as Map<dynamic, dynamic>;
       data.forEach((key, value) {
@@ -73,6 +74,13 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
     if (user != null) {
       currentUid = user.uid;
     }
+    setZoomLevel();
+  }
+  Future<void> setZoomLevel() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      zoomMap = (prefs.getDouble('zoom'))!;
+    });
   }
 
   @override
@@ -123,13 +131,9 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                 zoom: zoomMap,
                 target: LatLng(currentLocationData!.latitude!,
                     currentLocationData!.longitude!))));
-      }else if(selectedUid.isNotEmpty){
+      } else if (selectedUid.isNotEmpty) {
         googleMapController.animateCamera(CameraUpdate.newCameraPosition(
-            CameraPosition(
-                zoom: zoomMap,
-                target: destination
-            )
-        ));
+            CameraPosition(zoom: zoomMap, target: destination)));
       }
       if (selectedUid.isNotEmpty) {
         final directions = await DirectionsRepository().getDirections(
@@ -174,7 +178,6 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   }
 
   void updateCoordinates() async {
-    if (currentUid.isEmpty || currentUserdata['image'] == null) return;
     if (selectedUid.isNotEmpty) {
       var val = allUserCompleteData
           .firstWhere((element) => element.containsKey(selectedUid));
@@ -183,30 +186,47 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
           double.parse(selectedUserdata['longitude']));
       getPolyPoints();
     }
-
-    var url = Uri.parse(currentUserdata['image']);
-    var request = await http.get(url);
-    var dataBytes = request.bodyBytes;
+    if (currentUserdata['image'] != null) {
+      var url = Uri.parse(currentUserdata['image']);
+      var request = await http.get(url);
+      var dataBytes = request.bodyBytes;
+      locationMaker =
+          BitmapDescriptor.fromBytes(dataBytes.buffer.asUint8List());
+    } else {
+      BitmapDescriptor.fromAssetImage(
+              ImageConfiguration.empty,
+              currentUserdata['post'] == 'Driver'
+                  ? busIconAsset
+                  : personIconAsset)
+          .then((value) => locationMaker = value);
+    }
 
     markers.add(
       Marker(
         infoWindow: InfoWindow(
-            title: '${currentUserdata['post']}: ${currentUserdata['name']}',
+            title: '${currentUserdata['post']}: ${user?.displayName}',
             snippet: 'Phone: ${currentUserdata['phone']}',
             onTap: () {
-              print("Pop up clicked");
             }),
-        icon: BitmapDescriptor.fromBytes(dataBytes.buffer.asUint8List()),
-        markerId: MarkerId(currentUserdata['email']),
-        position: LatLng(double.parse(currentUserdata['latitude']),
-            double.parse(currentUserdata['longitude'])),
+        icon: locationMaker,
+        markerId: MarkerId(user?.email as String),
+        position: LatLng(
+            currentLocationData!.latitude!, currentLocationData!.longitude!),
       ),
     );
     allUserCompleteData.forEach((element) {
       element.forEach((key, value) async {
-        url = Uri.parse(value['image']);
-        request = await http.get(url);
-        dataBytes = request.bodyBytes;
+        if (value['image'] != null) {
+          var url = Uri.parse(value['image']);
+          var request = await http.get(url);
+          var dataBytes = request.bodyBytes;
+          locationMaker =
+              BitmapDescriptor.fromBytes(dataBytes.buffer.asUint8List());
+        } else {
+          BitmapDescriptor.fromAssetImage(ImageConfiguration.empty,
+                  value['post'] == 'Driver' ? busIconAsset : personIconAsset)
+              .then((value) => locationMaker = value);
+        }
         markers.add(
           Marker(
             onTap: () {
@@ -218,11 +238,11 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
             },
             infoWindow: InfoWindow(
                 title: '${value['post']}: ${value['name']}',
-                snippet: 'Phone: ${value['phone']}',
+                snippet: 'Call: ${value['phone']}',
                 onTap: () {
-                  print("Pop up clicked");
+                  _makePhoneCall(value['phone']);
                 }),
-            icon: BitmapDescriptor.fromBytes(dataBytes.buffer.asUint8List()),
+            icon: locationMaker,
             markerId: MarkerId(key),
             position: LatLng(double.parse(value['latitude']),
                 double.parse(value['longitude'])),
@@ -233,6 +253,14 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
     if (_mounted) {
       setState(() {});
     }
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    await launchUrl(launchUri);
   }
 
   @override
@@ -250,7 +278,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Expanded(
-              flex: 2,
+              flex: 1,
               child: Text(
                 'R:',
                 style: TextStyle(color: Colors.black, fontSize: 20.0),
@@ -278,7 +306,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                           },
                         )
                       : Text(
-                          currentUserdata['route'],
+                          currentUserdata['route'] ?? 'Loading..',
                           style: const TextStyle(
                               color: Colors.black, fontSize: 20.0),
                         ))
@@ -312,6 +340,17 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                         currentUserdata['route'], value);
                   });
                 },
+              ),
+              const SizedBox(
+                height: 12.0,
+              ),
+              Text(
+                focusLiveLocation
+                    ? 'Me'
+                    : selectedUid.isNotEmpty
+                        ? 'Dest'
+                        : 'None',
+                style: const TextStyle(color: Colors.black, fontSize: 20.0),
               ),
               const SizedBox(
                 height: 12.0,
@@ -391,6 +430,17 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                   ),
               ],
             ),
+      floatingActionButton: FloatingActionButton(
+        foregroundColor: Colors.black,
+        onPressed: () {
+          showDialog(
+              context: context,
+              builder: (context) {
+                return ZoomLevelPickerDialog( initialZoomLevel: zoomMap,);
+              });
+        },
+        child: const Icon(Icons.settings),
+      ),
     );
   }
 }
