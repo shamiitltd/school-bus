@@ -1,6 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:school_bus/db/location.dart';
+import 'package:school_bus/db/locationdb.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Utils {
   final user = FirebaseAuth.instance.currentUser;
@@ -88,6 +92,26 @@ class Utils {
     await databaseReference.update(updateValues).then((_) {}).catchError((
         error) {});
   }
+  void setDistanceSettings(double distance) async {
+    final databaseReference =
+    FirebaseDatabase.instance.ref().child("users/${user?.uid}");
+    Map<String, dynamic> updateValues = {
+      "distance": distance,
+    };
+    await databaseReference.update(updateValues).then((_) {}).catchError((
+        error) {});
+  }
+
+  Future<void> setTotalDistanceTravelled(double newDistance) async {
+    final prefs = await SharedPreferences.getInstance();
+    double? oldDist = prefs.getDouble('totalDistance');
+    if(oldDist != null){
+      newDistance += oldDist;
+    }
+    await prefs.setDouble('totalDistance', newDistance);
+    setDistanceSettings(newDistance);
+  }
+
   void setUserInfo(String post,String phoneNumber,String displayName, bool mapAccess) async {
     final databaseReference =
     FirebaseDatabase.instance.ref().child("users/${user?.uid}");
@@ -104,4 +128,22 @@ class Utils {
     });
   }
 
+  Future addLocations(latitude,longitude) async {
+    final locations = Locations(
+      latitude:latitude,
+      longitude:longitude,
+      distanceSoFar:0,
+      isProcessed:false,
+      addedDate:DateTime.now(),
+    );
+    await LocationDatabase.instance.create(locations);
+  }
+
+  Future<void> makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    await launchUrl(launchUri);
+  }
 }

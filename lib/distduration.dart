@@ -5,6 +5,8 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart' as latlonglib;
+import 'package:lite_rolling_switch/lite_rolling_switch.dart';
 import 'package:location/location.dart';
 import 'package:school_bus/Login/Utils.dart';
 import 'package:school_bus/constant.dart';
@@ -25,18 +27,19 @@ class OrderTrackingPage extends StatefulWidget {
 }
 
 class OrderTrackingPageState extends State<OrderTrackingPage> {
+  BitmapDescriptor myLocationMaker = BitmapDescriptor.defaultMarker;
   late GoogleMapController googleMapController;
   final Completer<GoogleMapController> _controller = Completer();
   Location location = Location();
   final user = FirebaseAuth.instance.currentUser;
   late LatLng destination;
   LocationData? currentLocationData;
+  LocationData? currentLocationDataOld;
   late StreamSubscription _firebaseSubscription;
   List<LatLng> polylineCoordinates = [];
   late Directions _info;
   bool infoUpdate = false;
 
-  BitmapDescriptor locationMaker = BitmapDescriptor.defaultMarker;
   Set<Marker> markers = {};
   Set<Map<dynamic, dynamic>> allUserCompleteData = {};
 
@@ -46,6 +49,8 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   String selectedUid = '';
   String _selectedRoute = '';
   bool _mounted = true;
+  bool recordingStart = false;
+  bool distanceLoaded = false;
 
   void loadRouteInfo() async {
     List<String> routeList = [];
@@ -56,11 +61,11 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
       data.forEach((key, value) {
         routeList.add(value);
       });
-      if(_mounted) {
+      if (_mounted) {
         setState(() {
-        userRoute = routeList;
-        _selectedRoute = userRoute[0];
-      });
+          userRoute = routeList;
+          _selectedRoute = userRoute[0];
+        });
       }
     });
   }
@@ -78,11 +83,24 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
     }
     setZoomLevel();
   }
+
   Future<void> setZoomLevel() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
+    if(_mounted) {
+      setState(() {
       zoomMap = (prefs.getDouble('zoom'))!;
     });
+    }
+  }
+
+
+  Future<void> firstDistanceLoaded(double newDistance) async {
+    if (!distanceLoaded) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('totalDistance', newDistance);
+      distanceLoaded = true;
+      if (_mounted) setState(() {});
+    }
   }
 
   @override
@@ -107,13 +125,43 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
           }
         }
       });
+      getLocationIcon();
       if (_mounted) {
         setState(() {});
       }
     });
   }
 
+  Future<void> getLocationIcon() async {
+    firstDistanceLoaded(currentUserdata['distance'] ?? 0);
+    var defaultIcon = personIconAsset;
+    if (currentUserdata['image'] != null &&
+        currentUserdata['trackMe'] == true) {
+      var url = Uri.parse(currentUserdata['image']);
+      var request = await http.get(url);
+      var dataBytes = request.bodyBytes;
+      myLocationMaker =
+          BitmapDescriptor.fromBytes(dataBytes.buffer.asUint8List());
+    } else {
+      if (currentUserdata['trackMe'] == true) {
+        defaultIcon = currentUserdata['post'] == 'Driver'
+            ? busIconAsset
+            : personIconAsset;
+      } else {
+        defaultIcon = currentUserdata['post'] == 'Driver'
+            ? busOffIconAsset
+            : personOffIconAsset;
+      }
+      await BitmapDescriptor.fromAssetImage(ImageConfiguration.empty, defaultIcon)
+          .then((value) {
+        myLocationMaker = value;
+      });
+    }
+  }
+
   void getCurrentLocation() async {
+    location.changeSettings(
+        accuracy: LocationAccuracy.high, interval: 10, distanceFilter: 0);
     location.getLocation().then((value) {
       currentLocationData = value;
       if (_mounted) {
@@ -126,16 +174,19 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
       currentLocationData = newlocation;
       Utils().setMyCoordinates(currentLocationData!.latitude!.toString(),
           currentLocationData!.longitude!.toString());
+
       updateCoordinates();
-      if (focusLiveLocation) {
-        googleMapController.animateCamera(CameraUpdate.newCameraPosition(
-            CameraPosition(
-                zoom: zoomMap,
-                target: LatLng(currentLocationData!.latitude!,
-                    currentLocationData!.longitude!))));
-      } else if (selectedUid.isNotEmpty) {
-        googleMapController.animateCamera(CameraUpdate.newCameraPosition(
-            CameraPosition(zoom: zoomMap, target: destination)));
+      if(focusOnOff){
+        if (focusLiveLocation) {
+          googleMapController.animateCamera(CameraUpdate.newCameraPosition(
+              CameraPosition(
+                  zoom: zoomMap,
+                  target: LatLng(currentLocationData!.latitude!,
+                      currentLocationData!.longitude!))));
+        } else if (selectedUid.isNotEmpty) {
+          googleMapController.animateCamera(CameraUpdate.newCameraPosition(
+              CameraPosition(zoom: zoomMap, target: destination)));
+        }
       }
       if (selectedUid.isNotEmpty) {
         final directions = await DirectionsRepository().getDirections(
@@ -145,11 +196,30 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
         infoUpdate = true;
         _info = directions;
       }
+      updateDistanceTravelled();
       if (_mounted) {
         setState(() {});
       }
     });
     location.enableBackgroundMode(enable: true);
+  }
+
+  void updateDistanceTravelled() {
+    currentLocationDataOld ??= currentLocationData;
+    var distance = const latlonglib.Distance();
+    final meter = distance(
+        latlonglib.LatLng(currentLocationDataOld!.latitude!,
+            currentLocationDataOld!.longitude!),
+        latlonglib.LatLng(
+            currentLocationData!.latitude!, currentLocationData!.longitude!));
+    if (recordingStart) {
+      distanceTravelled += meter / 1000;
+      Utils().setTotalDistanceTravelled(meter / 1000);
+    }
+    currentLocationDataOld = currentLocationData;
+    if (_mounted) {
+      setState(() {});
+    }
   }
 
   void getPolyPoints() async {
@@ -188,44 +258,22 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
           double.parse(selectedUserdata['longitude']));
       getPolyPoints();
     }
-    if (currentUserdata['image'] != null && currentUserdata['trackMe']==true) {
-      var url = Uri.parse(currentUserdata['image']);
-      var request = await http.get(url);
-      var dataBytes = request.bodyBytes;
-      locationMaker =
-          BitmapDescriptor.fromBytes(dataBytes.buffer.asUint8List());
-    } else {
-      BitmapDescriptor.fromAssetImage(
-              ImageConfiguration.empty,
-              currentUserdata['post'] == 'Driver'
-                  ? busIconAsset
-                  : personIconAsset)
-          .then((value) => locationMaker = value);
-    }
-    if (iconVisible==false){
-      BitmapDescriptor.fromAssetImage(
-          ImageConfiguration.empty,
-          currentUserdata['post'] == 'Driver'
-              ? busOffIconAsset
-              : personOffIconAsset)
-          .then((value) => locationMaker = value);
-    }
 
     markers.add(
       Marker(
         infoWindow: InfoWindow(
             title: '${currentUserdata['post']}: ${user?.displayName}',
             snippet: 'Phone: ${currentUserdata['phone']}',
-            onTap: () {
-            }),
-        icon: locationMaker,
+            onTap: () {}),
+        icon: myLocationMaker,
         markerId: MarkerId(user?.email as String),
         position: LatLng(
             currentLocationData!.latitude!, currentLocationData!.longitude!),
       ),
     );
-    allUserCompleteData.forEach((element) {
+    for (var element in allUserCompleteData) {
       element.forEach((key, value) async {
+        BitmapDescriptor locationMaker = BitmapDescriptor.defaultMarker;
         if (value['image'] != null) {
           var url = Uri.parse(value['image']);
           var request = await http.get(url);
@@ -233,7 +281,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
           locationMaker =
               BitmapDescriptor.fromBytes(dataBytes.buffer.asUint8List());
         } else {
-          BitmapDescriptor.fromAssetImage(ImageConfiguration.empty,
+          await BitmapDescriptor.fromAssetImage(ImageConfiguration.empty,
                   value['post'] == 'Driver' ? busIconAsset : personIconAsset)
               .then((value) => locationMaker = value);
         }
@@ -250,7 +298,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                 title: '${value['post']}: ${value['name']}',
                 snippet: 'Call: ${value['phone']}',
                 onTap: () {
-                  _makePhoneCall(value['phone']);
+                  Utils().makePhoneCall(value['phone']);
                 }),
             icon: locationMaker,
             markerId: MarkerId(key),
@@ -259,19 +307,12 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
           ),
         );
       });
-    });
+    }
     if (_mounted) {
       setState(() {});
     }
   }
 
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri launchUri = Uri(
-      scheme: 'tel',
-      path: phoneNumber,
-    );
-    await launchUrl(launchUri);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -335,32 +376,29 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Text('Me',
-                style: TextStyle(color: focusLiveLocation ? Colors.green:Colors.black, fontSize: 20.0),
-              ),
-              const Text('/',
-                style: TextStyle(color: Colors.black, fontSize: 20.0),
-              ),
-              Text(selectedUid.isNotEmpty
-                    ? 'Dest'
-                    : 'None',
-                style: TextStyle(color: !focusLiveLocation ? Colors.red:Colors.black, fontSize: 20.0),
-              ),
-              const SizedBox(
-                height: 12.0,
-              ),
-              Switch(
-                trackColor: MaterialStateProperty.all(Colors.black38),
-                activeColor: Colors.green.withOpacity(0.4),
-                inactiveThumbColor: Colors.red.withOpacity(0.4),
-                activeThumbImage: AssetImage(focusIcon),
-                inactiveThumbImage: AssetImage(noFocusIcon),
-                value: focusLiveLocation,
-                onChanged: (value) {
-                  setState(() {
-                    focusLiveLocation = value;
-                  });
-                },
+              Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: LiteRollingSwitch(
+                  width: 90,
+                  //initial value
+                  onTap: () => {},
+                  onDoubleTap: () => {},
+                  onSwipe: () => {},
+                  value: recordingStart,
+                  textOn: 'Start',
+                  textOff: 'End',
+                  colorOn: Colors.greenAccent[700] as Color,
+                  colorOff: Colors.redAccent[700] as Color,
+                  iconOn: Icons.done,
+                  iconOff: Icons.remove_circle_outline,
+                  textSize: 16.0,
+                  onChanged: (bool state) {
+                    setState(() {
+                      recordingStart = state;
+                      // focusLiveLocation = value;
+                    });
+                  },
+                ),
               ),
             ],
           )
@@ -435,7 +473,10 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
           showDialog(
               context: context,
               builder: (context) {
-                return ZoomLevelPickerDialog( initialZoomLevel: zoomMap,);
+                return ZoomLevelPickerDialog(
+                  initialZoomLevel: zoomMap,
+                  destSelected: selectedUid.isNotEmpty,
+                );
               });
         },
         child: const Icon(Icons.settings),

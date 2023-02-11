@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:school_bus/Login/LoginWidget.dart';
@@ -7,6 +9,7 @@ import 'package:school_bus/todomain.dart';
 import '../constant.dart';
 import '../distduration.dart';
 import '../order_traking_page.dart';
+import '../widget/LocationListView.dart';
 import 'homepage.dart';
 
 class LoginActivity extends StatefulWidget {
@@ -33,6 +36,7 @@ class _LoginActivityState extends State<LoginActivity> {
         isEmailVerified = user.emailVerified;
       });
     }
+    // Timer.periodic(const Duration(seconds: 1), (Timer t) => setState((){}));
   }
 
   @override
@@ -50,6 +54,7 @@ class _LoginActivityState extends State<LoginActivity> {
           }
           else if(snapshot.hasData){
             return const OrderTrackingPage();
+            // return LocationListView();
             // return const HomePage();
             // return BasicMapLoad();
           }else{

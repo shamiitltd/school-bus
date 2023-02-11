@@ -39,6 +39,7 @@ dependencies:
   flutter_polyline_points: ^1.0.0
   google_maps_flutter: ^2.2.3
   location: ^4.4.0
+  latlong2: ^0.8.1
   flutter_svg: ^1.1.6
   dio: ^4.0.6
   firebase_core: ^2.4.1
@@ -49,6 +50,9 @@ dependencies:
   http: ^0.13.5
   url_launcher: ^6.1.9
   shared_preferences: ^2.0.17
+  sqflite: ^2.2.4+1
+  sqflite_common: ^2.4.2+2
+  lite_rolling_switch: ^1.0.0
 #  google_maps_flutter_web: ^0.4.0+5
 
 dev_dependencies:
@@ -106,6 +110,7 @@ flutter:
   assets:
     - assets/bus.png
     - assets/busoff.png
+    - assets/colorbus.png
     - assets/focus.png
     - assets/invisible.png
     - assets/notfocus.png

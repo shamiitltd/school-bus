@@ -1,3 +1,4 @@
+import 'package:lite_rolling_switch/lite_rolling_switch.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 
@@ -6,21 +7,32 @@ import '../constant.dart';
 
 class ZoomLevelPickerDialog extends StatefulWidget {
   final double initialZoomLevel;
-
-  const ZoomLevelPickerDialog({super.key, required this.initialZoomLevel});
+  final bool destSelected;
+  const ZoomLevelPickerDialog(
+      {super.key, required this.initialZoomLevel, required this.destSelected});
 
   @override
   ZoomLevelPickerDialogState createState() => ZoomLevelPickerDialogState();
 }
 
 class ZoomLevelPickerDialogState extends State<ZoomLevelPickerDialog> {
-  /// current selection of the slider
   late double zoomLeveVal;
+  late bool destinationSelected;
 
   @override
   void initState() {
     super.initState();
     zoomLeveVal = widget.initialZoomLevel;
+    destinationSelected = widget.destSelected;
+    getTotalDistanceTravelled();
+  }
+
+  Future<void> getTotalDistanceTravelled() async {
+    final prefs = await SharedPreferences.getInstance();
+    double? distance = prefs.getDouble('totalDistance');
+    setState(() {
+      totalDistanceTravelled = distance ?? 0;
+    });
   }
 
   @override
@@ -33,65 +45,141 @@ class ZoomLevelPickerDialogState extends State<ZoomLevelPickerDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Zoom Level: ${zoomLeveVal.toStringAsFixed(2)}",
+            "Zoom Level: ${zoomLeveVal.toStringAsFixed(2)} [Must Save]",
           ),
           Slider(
             label: "Zoom Map",
             value: zoomLeveVal,
             onChanged: (value) {
               zoomLeveVal = value;
-              setState(() {
-              });
+              setState(() {});
             },
             min: 0.0,
             max: 22.0,
           ),
-          const SizedBox(
-            height: 12.0,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Visible ?',
+                style: TextStyle(color: Colors.black, fontSize: 20.0),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(15.0),
+                child: LiteRollingSwitch(
+                  width: 130,
+                  //initial value
+                  onTap: () => {},
+                  onDoubleTap: () => {},
+                  onSwipe: () => {},
+                  value: iconVisible,
+                  textOn: 'Visible',
+                  textOff: 'InVisible',
+                  colorOn: Colors.greenAccent[700] as Color,
+                  colorOff: Colors.redAccent[700] as Color,
+                  iconOn: Icons.remove_red_eye,
+                  iconOff: Icons.highlight_off,
+                  textSize: 16.0,
+                  onChanged: (bool state) {
+                    setState(() {
+                      iconVisible = state;
+                      Utils().setTraceMeSettings(state);
+                    });
+                  },
+                ),
+              ),
+            ],
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                iconVisible ? 'Visible' : 'InVisible',
-                style: const TextStyle(color: Colors.black, fontSize: 20.0),
+              const Text(
+                'Focus ?',
+                style: TextStyle(color: Colors.black, fontSize: 20.0),
               ),
-              Switch(
-                trackColor: MaterialStateProperty.all(Colors.black38),
-                activeColor: Colors.green.withOpacity(0.4),
-                inactiveThumbColor: Colors.red.withOpacity(0.4),
-                activeThumbImage: const AssetImage('assets/visible.png'),
-                inactiveThumbImage: const AssetImage('assets/invisible.png'),
-                value: iconVisible,
-                onChanged: (value) {
-                  setState(() {
-                    iconVisible = value;
-                    Utils().setTraceMeSettings(value);
-                  });
-                },
+              Padding(
+                padding: const EdgeInsets.all(15.0),
+                child: LiteRollingSwitch(
+                  width: 130,
+                  //initial value
+                  onTap: () => {},
+                  onDoubleTap: () => {},
+                  onSwipe: () => {},
+                  value: focusOnOff,
+                  textOn: 'Focus',
+                  textOff: 'No Focus',
+                  colorOn: Colors.greenAccent[700] as Color,
+                  colorOff: Colors.redAccent[700] as Color,
+                  iconOn: Icons.done,
+                  iconOff: Icons.remove_circle_outline,
+                  textSize: 16.0,
+                  onChanged: (bool state) {
+                    setState(() {
+                      focusOnOff = state;
+                      // focusLiveLocation = value;
+                    });
+                  },
+                ),
               ),
-
             ],
-          )
-
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Focus Me/Dest',
+                style: TextStyle(color: Colors.black, fontSize: 20.0),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(15.0),
+                child: LiteRollingSwitch(
+                  width: 100,
+                  //initial value
+                  onTap: () => {},
+                  onDoubleTap: () => {},
+                  onSwipe: () => {},
+                  value: focusLiveLocation,
+                  textOn: 'Me',
+                  textOff: destinationSelected ? 'Dest' : 'None',
+                  colorOn: Colors.greenAccent[700] as Color,
+                  colorOff: destinationSelected
+                      ? Colors.blue[700] as Color
+                      : Colors.redAccent[700] as Color,
+                  iconOn: Icons.done,
+                  iconOff: destinationSelected
+                      ? Icons.other_houses
+                      : Icons.remove_circle_outline,
+                  textSize: 16.0,
+                  onChanged: (bool state) {
+                    setState(() {
+                      focusLiveLocation = state;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('T-Distance',
+                  style: TextStyle(color: Colors.black, fontSize: 20.0)),
+              Text('${totalDistanceTravelled.toStringAsFixed(2)}Km',
+                  style: const TextStyle(color: Colors.black, fontSize: 20.0)),
+            ],
+          ),
         ],
       ),
       actions: [
         TextButton(
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
-                await prefs.setDouble('zoom', zoomLeveVal);
-                setState(() {
-                  zoomMap = zoomLeveVal.toDouble();
-                });
+              await prefs.setDouble('zoom', zoomLeveVal);
+              setState(() {
+                zoomMap = zoomLeveVal.toDouble();
+              });
               Navigator.pop(context);
             },
-            child: const Text("Save")),
-        TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("Cancel")),
+            child: const Text("Ok")),
       ],
     );
   }
