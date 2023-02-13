@@ -125,7 +125,7 @@ class ZoomLevelPickerDialogState extends State<ZoomLevelPickerDialog> {
                   onTap: () => {},
                   onDoubleTap: () => {},
                   onSwipe: () => {},
-                  value: focusOnOff,
+                  value: focusMe,
                   textOn: 'Focus',
                   textOff: 'No Focus',
                   colorOn: Colors.greenAccent[700] as Color,
@@ -135,7 +135,7 @@ class ZoomLevelPickerDialogState extends State<ZoomLevelPickerDialog> {
                   textSize: 16.0,
                   onChanged: (bool state) {
                     setState(() {
-                      focusOnOff = state;
+                      focusMe = state;
                       // focusLiveLocation = value;
                     });
                   },
@@ -158,7 +158,7 @@ class ZoomLevelPickerDialogState extends State<ZoomLevelPickerDialog> {
                   onTap: () => {},
                   onDoubleTap: () => {},
                   onSwipe: () => {},
-                  value: focusLiveLocation,
+                  value: focusDest,
                   textOn: 'Me',
                   textOff: destinationSelected ? 'Dest' : 'None',
                   colorOn: Colors.greenAccent[700] as Color,
@@ -172,7 +172,7 @@ class ZoomLevelPickerDialogState extends State<ZoomLevelPickerDialog> {
                   textSize: 16.0,
                   onChanged: (bool state) {
                     setState(() {
-                      focusLiveLocation = state;
+                      focusDest = state;
                     });
                   },
                 ),

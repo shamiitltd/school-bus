@@ -10,6 +10,7 @@ class AssetsRes {
   static const String BUSOFFTOP = 'assets/busofftop.png';
   static const String BUSTOP = 'assets/bustop.png';
   static const String COLORBUS = 'assets/colorbus.png';
+  static const String EYEOFF = 'assets/eyeoff.png';
   static const String FOCUS = 'assets/focus.png';
   static const String INVISIBLE = 'assets/invisible.png';
   static const String NOTFOCUS = 'assets/notfocus.png';

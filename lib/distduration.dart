@@ -12,6 +12,7 @@ import 'package:location/location.dart';
 import 'package:school_bus/Login/Utils.dart';
 import 'package:school_bus/constant.dart';
 import 'package:http/http.dart' as http;
+import 'package:school_bus/res/assets_res.dart';
 import 'package:school_bus/widget/ZoomPopup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -36,6 +37,8 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   Location location = Location();
   final user = FirebaseAuth.instance.currentUser;
   late LatLng destination;
+  late LatLng myLocation;
+  late LatLng mapCameraLocation;
   LocationData? currentLocationData;
   LocationData? currentLocationDataOld;
   late StreamSubscription _firebaseSubscription;
@@ -147,7 +150,8 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
           BitmapDescriptor.fromBytes(dataBytes.buffer.asUint8List());
     } else {
       String busIconDynamic = tiltMap > 30 ? busIconAsset : busTopIconAsset;
-      String busOffIconDynamic = tiltMap > 30 ? busOffIconAsset : busTopOffIconAsset;
+      String busOffIconDynamic =
+          tiltMap > 30 ? busOffIconAsset : busTopOffIconAsset;
       if (currentUserdata['trackMe'] == true) {
         defaultIcon = currentUserdata['post'] == 'Driver'
             ? busIconDynamic
@@ -170,6 +174,10 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
         accuracy: LocationAccuracy.high, interval: 10, distanceFilter: 0);
     location.getLocation().then((value) {
       currentLocationData = value;
+      myLocation = LatLng(
+          Utils().setPrecision(currentLocationData!.latitude!, 3),
+          Utils().setPrecision(currentLocationData!.longitude!, 3));
+      mapCameraLocation = myLocation;
       if (_mounted) {
         setState(() {});
       }
@@ -180,10 +188,12 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
       currentLocationData = newlocation;
       Utils().setMyCoordinates(currentLocationData!.latitude!.toString(),
           currentLocationData!.longitude!.toString(), bearingMap);
-
+      myLocation = LatLng(
+          Utils().setPrecision(currentLocationData!.latitude!, 3),
+          Utils().setPrecision(currentLocationData!.longitude!, 3));
       updateCoordinates();
-      if (focusOnOff) {
-        if (focusLiveLocation) {
+      if (focusMe || focusDest) {
+        if (focusMe) {
           googleMapController.animateCamera(CameraUpdate.newCameraPosition(
               CameraPosition(
                   bearing: bearingMap,
@@ -209,6 +219,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
         _info = directions;
       }
       updateDistanceTravelled();
+      isRefresh = true;
       if (_mounted) {
         setState(() {});
       }
@@ -451,6 +462,18 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
               alignment: Alignment.center,
               children: [
                 GoogleMap(
+                  onCameraMove: (object) => {
+                    setState(() {
+                      mapCameraLocation = LatLng(
+                          object.target.latitude, object.target.longitude);
+                      focusMe = Utils()
+                          .compareLatLang(myLocation, mapCameraLocation, zoomPrecision);
+                      if (selectedUid.isNotEmpty) {
+                        focusDest = Utils()
+                            .compareLatLang(destination, mapCameraLocation, zoomPrecision);
+                      }
+                    })
+                  },
                   mapType: MapType.hybrid,
                   tiltGesturesEnabled: true,
                   rotateGesturesEnabled: true,
@@ -461,7 +484,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                   trafficEnabled: true,
                   scrollGesturesEnabled: true,
                   zoomGesturesEnabled: true,
-                  myLocationButtonEnabled: true,
+                  myLocationButtonEnabled: false,
                   zoomControlsEnabled: false,
                   initialCameraPosition: CameraPosition(
                       bearing: bearingMap,
@@ -511,20 +534,164 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                   ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        foregroundColor: Colors.black,
-        onPressed: () {
-          showDialog(
-              context: context,
-              builder: (context) {
-                return ZoomLevelPickerDialog(
-                  initialZoomLevel: zoomMap,
-                  destSelected: selectedUid.isNotEmpty,
-                );
-              });
-        },
-        child: const Icon(Icons.settings),
+      floatingActionButton: customFloatingButton(),
+    );
+  }
+
+  Widget customFloatingButton() {
+    getTotalDistanceTravelled();
+    return Padding(
+      padding: const EdgeInsets.only(left: 32.0),
+      child: Column(
+        mainAxisAlignment: isSettingOpen
+            ? MainAxisAlignment.spaceBetween
+            : MainAxisAlignment.end,
+        children: [
+          if (isSettingOpen)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 200.0, horizontal: 8.0),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 6.0,
+                      horizontal: 12.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent,
+                      borderRadius: BorderRadius.circular(20.0),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          offset: Offset(0, 2),
+                          blurRadius: 6.0,
+                        )
+                      ],
+                    ),
+                    child: Text('Zoom:${zoomMap.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 20.0)),
+                  ),
+                  Slider(
+                    label: "Zoom Map",
+                    value: zoomMap,
+                    onChanged: (value) {
+                      zoomMap = value;
+                      setState(() {});
+                    },
+                    min: 0.0,
+                    max: 22.0,
+                  ),
+                ],
+              ),
+            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    FloatingActionButton(
+                      onPressed: () {
+                        focusMe = !focusMe;
+                        focusDest = false;
+                        setState(() {});
+                      },
+                      tooltip: 'Focus Me',
+                      child: focusMe
+                          ? const Icon(Icons.center_focus_strong)
+                          : const ImageIcon(AssetImage(noFocusIcon)),
+                    ),
+                    if (selectedUid.isNotEmpty) const SizedBox(width: 8),
+                    if (selectedUid.isNotEmpty)
+                      FloatingActionButton(
+                        onPressed: () {
+                          focusDest = !focusDest;
+                          focusMe = false;
+                          setState(() {});
+                        },
+                        tooltip: 'Focus Dest',
+                        child: focusDest
+                            ? const Icon(Icons.person)
+                            : const Icon(Icons.person_off_rounded),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (isSettingOpen)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 6.0,
+                              horizontal: 12.0,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blueAccent,
+                              borderRadius: BorderRadius.circular(20.0),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  offset: Offset(0, 2),
+                                  blurRadius: 6.0,
+                                )
+                              ],
+                            ),
+                            child: Text(
+                                '${totalDistanceTravelled.toStringAsFixed(2)} Km',
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 20.0)),
+                          ),
+                        if (isSettingOpen) const SizedBox(height: 8),
+                        if (isSettingOpen)
+                          FloatingActionButton(
+                            onPressed: () {
+                              setState(() {
+                                iconVisible = !iconVisible;
+                                Utils().setTraceMeSettings(iconVisible);
+                              });
+                            },
+                            child: iconVisible
+                                ? const Icon(Icons.remove_red_eye)
+                                : const ImageIcon(AssetImage(AssetsRes.EYEOFF)),
+                          ),
+                        if (isSettingOpen) const SizedBox(height: 8),
+                        FloatingActionButton(
+                          onPressed: () {
+                            setState(() {
+                              isSettingOpen = !isSettingOpen;
+                            });
+                          },
+                          child: Icon(
+                              isSettingOpen ? Icons.close : Icons.settings),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> getTotalDistanceTravelled() async {
+    final prefs = await SharedPreferences.getInstance();
+    double? distance = prefs.getDouble('totalDistance');
+    if (_mounted) {
+      setState(() {
+        totalDistanceTravelled = distance ?? 0;
+      });
+    }
   }
 }

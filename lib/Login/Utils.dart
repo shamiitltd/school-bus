@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:school_bus/db/location.dart';
 import 'package:school_bus/db/locationdb.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -146,5 +147,12 @@ class Utils {
       path: phoneNumber,
     );
     await launchUrl(launchUri);
+  }
+
+  double setPrecision(double number, int precision){
+    return double.parse(number.toStringAsFixed(precision));
+  }
+  bool compareLatLang(LatLng coordinate1, LatLng coordinate2, int precision){
+    return (setPrecision(coordinate1.longitude,precision) == setPrecision(coordinate2.longitude,precision) && setPrecision(coordinate1.latitude,precision) == setPrecision(coordinate2.latitude,precision));
   }
 }

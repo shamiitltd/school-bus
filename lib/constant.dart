@@ -9,8 +9,10 @@ bool isEmailVerified = false;
 //Dynamic variables
 double distanceTravelled = 0;
 double totalDistanceTravelled=0;
-bool focusLiveLocation = true;
-bool focusOnOff = true;
+
+bool focusMe = true;
+bool focusDest = false;
+int zoomPrecision = 3;
 
 double zoomMap = 15.5; //when you increase the value it will zoom the map
 bool iconVisible = true;
@@ -18,6 +20,8 @@ int delayRecording = 10;//in seconds
 
 double bearingMap = 0;
 double tiltMap = 56.440717697143555;
+bool isRefresh = true;
+bool isSettingOpen = false;
 
 
 //Static Variables
