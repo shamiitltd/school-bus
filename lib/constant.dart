@@ -13,6 +13,7 @@ double totalDistanceTravelled=0;
 bool focusMe = true;
 bool focusDest = false;
 int zoomPrecision = 3;
+bool floatingMini = true;
 
 double zoomMap = 15.5; //when you increase the value it will zoom the map
 bool iconVisible = true;

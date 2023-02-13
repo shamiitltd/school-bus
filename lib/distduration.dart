@@ -594,6 +594,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                 child: Row(
                   children: [
                     FloatingActionButton(
+                      mini: floatingMini,
                       onPressed: () {
                         focusMe = !focusMe;
                         focusDest = false;
@@ -607,6 +608,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                     if (selectedUid.isNotEmpty) const SizedBox(width: 8),
                     if (selectedUid.isNotEmpty)
                       FloatingActionButton(
+                        mini: floatingMini,
                         onPressed: () {
                           focusDest = !focusDest;
                           focusMe = false;
@@ -653,6 +655,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                         if (isSettingOpen) const SizedBox(height: 8),
                         if (isSettingOpen)
                           FloatingActionButton(
+                            mini: floatingMini,
                             onPressed: () {
                               setState(() {
                                 iconVisible = !iconVisible;
@@ -665,6 +668,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                           ),
                         if (isSettingOpen) const SizedBox(height: 8),
                         FloatingActionButton(
+                          mini: floatingMini,
                           onPressed: () {
                             setState(() {
                               isSettingOpen = !isSettingOpen;
