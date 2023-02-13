@@ -1,3 +1,4 @@
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:lite_rolling_switch/lite_rolling_switch.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,14 @@ class ZoomLevelPickerDialog extends StatefulWidget {
 class ZoomLevelPickerDialogState extends State<ZoomLevelPickerDialog> {
   late double zoomLeveVal;
   late bool destinationSelected;
+  double? heading;
+  bool _mounted = true;
+
+  @override
+  void dispose() {
+    _mounted=false;
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -25,14 +34,25 @@ class ZoomLevelPickerDialogState extends State<ZoomLevelPickerDialog> {
     zoomLeveVal = widget.initialZoomLevel;
     destinationSelected = widget.destSelected;
     getTotalDistanceTravelled();
+
+    FlutterCompass.events?.listen((event) {
+      if (_mounted) {
+        setState(() {
+          heading = event.heading;
+        });
+      }
+    });
   }
+
 
   Future<void> getTotalDistanceTravelled() async {
     final prefs = await SharedPreferences.getInstance();
     double? distance = prefs.getDouble('totalDistance');
-    setState(() {
+    if(_mounted) {
+      setState(() {
       totalDistanceTravelled = distance ?? 0;
     });
+    }
   }
 
   @override
@@ -60,7 +80,8 @@ class ZoomLevelPickerDialogState extends State<ZoomLevelPickerDialog> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Visible ?',
+              const Text(
+                'Visible ?',
                 style: TextStyle(color: Colors.black, fontSize: 20.0),
               ),
               Padding(
@@ -164,6 +185,15 @@ class ZoomLevelPickerDialogState extends State<ZoomLevelPickerDialog> {
               const Text('T-Distance',
                   style: TextStyle(color: Colors.black, fontSize: 20.0)),
               Text('${totalDistanceTravelled.toStringAsFixed(2)}Km',
+                  style: const TextStyle(color: Colors.black, fontSize: 20.0)),
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Angle:',
+                  style: TextStyle(color: Colors.black, fontSize: 20.0)),
+              Text('${heading?.toStringAsFixed(2)}',
                   style: const TextStyle(color: Colors.black, fontSize: 20.0)),
             ],
           ),

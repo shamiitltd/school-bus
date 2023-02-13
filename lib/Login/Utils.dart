@@ -58,12 +58,13 @@ class Utils {
     });
     return data;
   }
-  void setMyCoordinates(String latitude, String longitude) async {
+  void setMyCoordinates(String latitude, String longitude, double direction) async {
     final databaseReference =
     FirebaseDatabase.instance.ref().child("users/${user?.uid}");
     Map<String, dynamic> updateValues = {
       "latitude": latitude,
       "longitude": longitude,
+      "direction":direction,
     };
     await databaseReference.update(updateValues).then((_) {}).catchError((
         error) {});

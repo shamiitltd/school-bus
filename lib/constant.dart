@@ -15,14 +15,21 @@ bool focusOnOff = true;
 double zoomMap = 15.5; //when you increase the value it will zoom the map
 bool iconVisible = true;
 int delayRecording = 10;//in seconds
+
+double bearingMap = 0;
+double tiltMap = 56.440717697143555;
+
+
 //Static Variables
 const double defaultPadding = 16.0;
 
 String busIconUrl = 'https://learn.geekspool.com/wp-content/uploads/mapicons/bus.png';
 String personIconUrl = 'https://learn.geekspool.com/wp-content/uploads/mapicons/person.png';
 
-const String busIconAsset = AssetsRes.COLORBUS;
+const String busIconAsset = AssetsRes.BUS;
 const String busOffIconAsset = AssetsRes.BUSOFF;
+const String busTopIconAsset = AssetsRes.BUSTOP;
+const String busTopOffIconAsset = AssetsRes.BUSOFFTOP;
 const String personIconAsset = AssetsRes.PERSON;
 const String personOffIconAsset = AssetsRes.PERSONOFF;
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:latlong2/latlong.dart' as latlonglib;
@@ -14,6 +15,8 @@ import 'package:http/http.dart' as http;
 import 'package:school_bus/widget/ZoomPopup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:motion_sensors/motion_sensors.dart';
+import 'package:vector_math/vector_math_64.dart' hide Colors;
 
 import 'Login/countryData.dart';
 import 'directions_model.dart';
@@ -51,6 +54,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
   bool _mounted = true;
   bool recordingStart = false;
   bool distanceLoaded = false;
+  final Vector3 _orientation = Vector3.zero();
 
   void loadRouteInfo() async {
     List<String> routeList = [];
@@ -86,13 +90,12 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
 
   Future<void> setZoomLevel() async {
     final prefs = await SharedPreferences.getInstance();
-    if(_mounted) {
+    if (_mounted) {
       setState(() {
-      zoomMap = (prefs.getDouble('zoom'))!;
-    });
+        zoomMap = (prefs.getDouble('zoom'))!;
+      });
     }
   }
-
 
   Future<void> firstDistanceLoaded(double newDistance) async {
     if (!distanceLoaded) {
@@ -143,16 +146,19 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
       myLocationMaker =
           BitmapDescriptor.fromBytes(dataBytes.buffer.asUint8List());
     } else {
+      String busIconDynamic = tiltMap > 30 ? busIconAsset : busTopIconAsset;
+      String busOffIconDynamic = tiltMap > 30 ? busOffIconAsset : busTopOffIconAsset;
       if (currentUserdata['trackMe'] == true) {
         defaultIcon = currentUserdata['post'] == 'Driver'
-            ? busIconAsset
+            ? busIconDynamic
             : personIconAsset;
       } else {
         defaultIcon = currentUserdata['post'] == 'Driver'
-            ? busOffIconAsset
+            ? busOffIconDynamic
             : personOffIconAsset;
       }
-      await BitmapDescriptor.fromAssetImage(ImageConfiguration.empty, defaultIcon)
+      await BitmapDescriptor.fromAssetImage(
+              ImageConfiguration.empty, defaultIcon)
           .then((value) {
         myLocationMaker = value;
       });
@@ -173,19 +179,25 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
     location.onLocationChanged.listen((newlocation) async {
       currentLocationData = newlocation;
       Utils().setMyCoordinates(currentLocationData!.latitude!.toString(),
-          currentLocationData!.longitude!.toString());
+          currentLocationData!.longitude!.toString(), bearingMap);
 
       updateCoordinates();
-      if(focusOnOff){
+      if (focusOnOff) {
         if (focusLiveLocation) {
           googleMapController.animateCamera(CameraUpdate.newCameraPosition(
               CameraPosition(
+                  bearing: bearingMap,
+                  tilt: tiltMap,
                   zoom: zoomMap,
                   target: LatLng(currentLocationData!.latitude!,
                       currentLocationData!.longitude!))));
         } else if (selectedUid.isNotEmpty) {
           googleMapController.animateCamera(CameraUpdate.newCameraPosition(
-              CameraPosition(zoom: zoomMap, target: destination)));
+              CameraPosition(
+                  bearing: bearingMap,
+                  tilt: tiltMap,
+                  zoom: zoomMap,
+                  target: destination)));
         }
       }
       if (selectedUid.isNotEmpty) {
@@ -202,6 +214,26 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
       }
     });
     location.enableBackgroundMode(enable: true);
+
+    FlutterCompass.events?.listen((event) {
+      if (_mounted) {
+        setState(() {
+          bearingMap = event.heading!;
+        });
+      }
+    });
+    motionSensors.isOrientationAvailable().then((available) {
+      if (available) {
+        motionSensors.orientation.listen((OrientationEvent event) {
+          if (_mounted) {
+            setState(() {
+              _orientation.setValues(event.yaw, event.pitch, event.roll);
+              tiltMap = degrees(_orientation.y);
+            });
+          }
+        });
+      }
+    });
   }
 
   void updateDistanceTravelled() {
@@ -261,6 +293,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
 
     markers.add(
       Marker(
+        rotation: bearingMap,
         infoWindow: InfoWindow(
             title: '${currentUserdata['post']}: ${user?.displayName}',
             snippet: 'Phone: ${currentUserdata['phone']}',
@@ -281,12 +314,14 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
           locationMaker =
               BitmapDescriptor.fromBytes(dataBytes.buffer.asUint8List());
         } else {
+          String busIconDynamic = tiltMap > 30 ? busIconAsset : busTopIconAsset;
           await BitmapDescriptor.fromAssetImage(ImageConfiguration.empty,
-                  value['post'] == 'Driver' ? busIconAsset : personIconAsset)
+                  value['post'] == 'Driver' ? busIconDynamic : personIconAsset)
               .then((value) => locationMaker = value);
         }
         markers.add(
           Marker(
+            rotation: value['direction'] ?? 0,
             onTap: () {
               selectedUid = key;
               selectedUserdata = value;
@@ -312,7 +347,6 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
       setState(() {});
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -417,11 +451,21 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
               alignment: Alignment.center,
               children: [
                 GoogleMap(
+                  mapType: MapType.hybrid,
+                  tiltGesturesEnabled: true,
+                  rotateGesturesEnabled: true,
+                  mapToolbarEnabled: true,
+                  compassEnabled: true,
+                  buildingsEnabled: true,
+                  myLocationEnabled: true,
+                  trafficEnabled: true,
                   scrollGesturesEnabled: true,
                   zoomGesturesEnabled: true,
-                  myLocationButtonEnabled: false,
+                  myLocationButtonEnabled: true,
                   zoomControlsEnabled: false,
                   initialCameraPosition: CameraPosition(
+                      bearing: bearingMap,
+                      tilt: tiltMap,
                       target: LatLng(currentLocationData!.latitude!,
                           currentLocationData!.longitude!),
                       zoom: zoomMap),

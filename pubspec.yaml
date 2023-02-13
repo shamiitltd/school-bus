@@ -53,6 +53,8 @@ dependencies:
   sqflite: ^2.2.4+1
   sqflite_common: ^2.4.2+2
   lite_rolling_switch: ^1.0.0
+  flutter_compass: ^0.7.0
+  motion_sensors: ^0.1.0
 #  google_maps_flutter_web: ^0.4.0+5
 
 dev_dependencies:
@@ -110,6 +112,8 @@ flutter:
   assets:
     - assets/bus.png
     - assets/busoff.png
+    - assets/busofftop.png
+    - assets/bustop.png
     - assets/colorbus.png
     - assets/focus.png
     - assets/invisible.png

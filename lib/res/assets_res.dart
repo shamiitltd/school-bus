@@ -7,6 +7,8 @@ class AssetsRes {
   static const String PLUGIN_VERSION = '1.0.0+1';
   static const String BUS = 'assets/bus.png';
   static const String BUSOFF = 'assets/busoff.png';
+  static const String BUSOFFTOP = 'assets/busofftop.png';
+  static const String BUSTOP = 'assets/bustop.png';
   static const String COLORBUS = 'assets/colorbus.png';
   static const String FOCUS = 'assets/focus.png';
   static const String INVISIBLE = 'assets/invisible.png';

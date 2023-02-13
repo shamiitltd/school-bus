@@ -377,7 +377,7 @@ class _RegisterUserState extends State<RegisterUser> {
       location.getLocation().then((value) {
         setState(() {
           LocationData? currentLocationData = value;
-          Utils().setMyCoordinates(currentLocationData.latitude!.toString(), currentLocationData.longitude!.toString());
+          Utils().setMyCoordinates(currentLocationData.latitude!.toString(), currentLocationData.longitude!.toString(), bearingMap);
         });
       });
 
