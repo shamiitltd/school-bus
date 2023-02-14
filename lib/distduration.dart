@@ -247,7 +247,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
     });
   }
 
-  void updateDistanceTravelled() {
+  Future<void> updateDistanceTravelled() async {
     currentLocationDataOld ??= currentLocationData;
     var distance = const latlonglib.Distance();
     final meter = distance(
@@ -257,7 +257,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
             currentLocationData!.latitude!, currentLocationData!.longitude!));
     if (recordingStart) {
       distanceTravelled += meter / 1000;
-      Utils().setTotalDistanceTravelled(meter / 1000);
+      await Utils().setTotalDistanceTravelled(meter / 1000);
     }
     currentLocationDataOld = currentLocationData;
     if (_mounted) {
@@ -385,8 +385,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
             Expanded(
               flex: 2,
               child: _selectedRoute.isNotEmpty
-                  ? ((currentUserdata['post'] == 'Driver' ||
-                          currentUserdata['routeAccess'] == true)
+                  ? ((currentUserdata['routeAccess'] == true)
                       ? DropdownButton(
                           value: _selectedRoute,
                           items: userRoute.map((route) {
@@ -396,10 +395,10 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                             );
                           }).toList(),
                           onChanged: (value) {
+                            _selectedRoute = value ?? '';
+                            Utils().setMyMapSettings(currentUserdata['image']??'',
+                                _selectedRoute, currentUserdata['trackMe']??true);
                             setState(() {
-                              _selectedRoute = value!;
-                              Utils().setMyMapSettings(currentUserdata['image'],
-                                  _selectedRoute, currentUserdata['trackMe']);
                             });
                           },
                         )

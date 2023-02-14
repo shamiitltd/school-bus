@@ -342,13 +342,14 @@ class _RegisterUserState extends State<RegisterUser> {
       String password,
       String confirmPassword,
       String displayName,
-      _selectedYourPost,
-      _selectedYourRoute,
+      selectedYourPost,
+      selectedYourRoute,
       phoneNumber) async {
     if (email.isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty ||
         displayName.isEmpty) {
+      Utils.showSnackBar('Please enter all required field');
       return;
     }
     if (password != confirmPassword) {
@@ -367,17 +368,17 @@ class _RegisterUserState extends State<RegisterUser> {
       User? user = result.user;
       user?.updateDisplayName(displayName);
       String iconUrl = '';
-      Utils().setMyMapSettings(iconUrl, _selectedYourRoute, true);
-      if(_selectedYourPost == 'Driver' || _selectedYourPost == 'Director') {
-        Utils().setUserInfo(_selectedYourPost, phoneNumber, displayName, true);
+      await Utils().setMyMapSettings(iconUrl, selectedYourRoute, true);
+      if(selectedYourPost == 'Driver' || selectedYourPost == 'Director') {
+        await Utils().setUserInfo(selectedYourPost, phoneNumber, displayName, true);
       }else{
-        Utils().setUserInfo(_selectedYourPost, phoneNumber, displayName, false);
+        await Utils().setUserInfo(selectedYourPost, phoneNumber, displayName, false);
       }
       Location location = Location();
-      location.getLocation().then((value) {
+      location.getLocation().then((value) async {
+        LocationData? currentLocationData = value;
+        await Utils().setMyCoordinates(currentLocationData.latitude!.toString(), currentLocationData.longitude!.toString(), bearingMap);
         setState(() {
-          LocationData? currentLocationData = value;
-          Utils().setMyCoordinates(currentLocationData.latitude!.toString(), currentLocationData.longitude!.toString(), bearingMap);
         });
       });
 
