@@ -136,6 +136,7 @@ class Utils {
       "phone": phoneNumber,
       "email": user?.email!,
       "name": displayName,
+      "distance":0,
       "routeAccess": routeAccess, //'default'
     };
     await databaseReference

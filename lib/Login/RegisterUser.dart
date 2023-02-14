@@ -366,7 +366,7 @@ class _RegisterUserState extends State<RegisterUser> {
       final result = await auth.createUserWithEmailAndPassword(
           email: email, password: password);
       User? user = result.user;
-      user?.updateDisplayName(displayName);
+      await user?.updateDisplayName(displayName);
       String iconUrl = '';
       await Utils().setMyMapSettings(iconUrl, selectedYourRoute, true);
       if(selectedYourPost == 'Driver' || selectedYourPost == 'Director') {
@@ -375,7 +375,7 @@ class _RegisterUserState extends State<RegisterUser> {
         await Utils().setUserInfo(selectedYourPost, phoneNumber, displayName, false);
       }
       Location location = Location();
-      location.getLocation().then((value) async {
+      await location.getLocation().then((value) async {
         LocationData? currentLocationData = value;
         await Utils().setMyCoordinates(currentLocationData.latitude!.toString(), currentLocationData.longitude!.toString(), bearingMap);
         setState(() {
