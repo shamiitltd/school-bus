@@ -330,9 +330,11 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                   value['post'] == 'Driver' ? busIconDynamic : personIconAsset)
               .then((value) => locationMaker = value);
         }
+        double netDirection = (value['direction']??0) - bearingMap;
+        netDirection  = netDirection < - 180? (360+netDirection)%180 : netDirection;
         markers.add(
           Marker(
-            rotation: value['direction'] ?? 0,
+            rotation: netDirection,
             onTap: () {
               selectedUid = key;
               selectedUserdata = value;
@@ -430,8 +432,8 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                   onDoubleTap: () => {},
                   onSwipe: () => {},
                   value: recordingStart,
-                  textOn: 'Start',
-                  textOff: 'End',
+                  textOn: 'End',
+                  textOff: 'Start',
                   colorOn: Colors.greenAccent[700] as Color,
                   colorOff: Colors.redAccent[700] as Color,
                   iconOn: Icons.done,
