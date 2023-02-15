@@ -297,7 +297,7 @@ class _RegisterUserState extends State<RegisterUser> {
                           displayNameController.text.trim(),
                           _selectedYourPost,
                           _selectedYourRoute,
-                          _selectedCountryCode+phoneController.text.trim());
+                          _selectedCountryCode + phoneController.text.trim());
                       // Submit form data here...
                     }
                   },
@@ -342,13 +342,14 @@ class _RegisterUserState extends State<RegisterUser> {
       String password,
       String confirmPassword,
       String displayName,
-      _selectedYourPost,
-      _selectedYourRoute,
+      selectedYourPost,
+      selectedYourRoute,
       phoneNumber) async {
     if (email.isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty ||
         displayName.isEmpty) {
+      Utils.showSnackBar('Please enter all required field');
       return;
     }
     if (password != confirmPassword) {
@@ -365,25 +366,17 @@ class _RegisterUserState extends State<RegisterUser> {
       final result = await auth.createUserWithEmailAndPassword(
           email: email, password: password);
       User? user = result.user;
-      user?.updateDisplayName(displayName);
-      print('User created: ${user?.uid}');
-      String iconUrl = _selectedYourPost=='Driver'?busIconUrl:personIconUrl;
-      Utils().setMyMapSettings(iconUrl, _selectedYourRoute, true);
-      if(_selectedYourPost == 'Driver' || _selectedYourPost == 'Director') {
-        Utils().setUserInfo(_selectedYourPost, phoneNumber, displayName, true);
-      }else{
-        Utils().setUserInfo(_selectedYourPost, phoneNumber, displayName, false);
-      }
-      Location location = Location();
-      location.getLocation().then((value) {
-        setState(() {
-          LocationData? currentLocationData = value;
-          Utils().setMyCoordinates(currentLocationData.latitude!.toString(), currentLocationData.longitude!.toString());
-        });
+      await user?.updateDisplayName(displayName);
+      bool routeAccess =
+          selectedYourPost == 'Driver' || selectedYourPost == 'Director';
+      await Utils()
+          .registerUserForGoogleMap(selectedYourPost, phoneNumber, email,
+              displayName, selectedYourRoute, routeAccess, true)
+          .then((_) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }).catchError((error) {
+        Utils.showSnackBar(error);
       });
-
-      // ignore: use_build_context_synchronously
-      Navigator.of(context).popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (e) {
       Utils.showSnackBar(e.message);
       Navigator.of(context).pop();
