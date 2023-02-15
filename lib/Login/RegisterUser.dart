@@ -297,7 +297,7 @@ class _RegisterUserState extends State<RegisterUser> {
                           displayNameController.text.trim(),
                           _selectedYourPost,
                           _selectedYourRoute,
-                          _selectedCountryCode+phoneController.text.trim());
+                          _selectedCountryCode + phoneController.text.trim());
                       // Submit form data here...
                     }
                   },
@@ -367,23 +367,16 @@ class _RegisterUserState extends State<RegisterUser> {
           email: email, password: password);
       User? user = result.user;
       await user?.updateDisplayName(displayName);
-      String iconUrl = '';
-      await Utils().setMyMapSettings(iconUrl, selectedYourRoute, true);
-      if(selectedYourPost == 'Driver' || selectedYourPost == 'Director') {
-        await Utils().setUserInfo(selectedYourPost, phoneNumber, displayName, true);
-      }else{
-        await Utils().setUserInfo(selectedYourPost, phoneNumber, displayName, false);
-      }
-      Location location = Location();
-      await location.getLocation().then((value) async {
-        LocationData? currentLocationData = value;
-        await Utils().setMyCoordinates(currentLocationData.latitude!.toString(), currentLocationData.longitude!.toString(), bearingMap);
-        setState(() {
-        });
+      bool routeAccess =
+          selectedYourPost == 'Driver' || selectedYourPost == 'Director';
+      await Utils()
+          .registerUserForGoogleMap(selectedYourPost, phoneNumber, email,
+              displayName, selectedYourRoute, routeAccess, true)
+          .then((_) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }).catchError((error) {
+        Utils.showSnackBar(error);
       });
-
-      // ignore: use_build_context_synchronously
-      Navigator.of(context).popUntil((route) => route.isFirst);
     } on FirebaseAuthException catch (e) {
       Utils.showSnackBar(e.message);
       Navigator.of(context).pop();

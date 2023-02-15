@@ -77,7 +77,8 @@ class Utils {
         .catchError((error) {});
   }
 
-  Future<void> setMyMapSettings(String image, String route, bool trackMe) async {
+  Future<void> setMyMapSettings(
+      String image, String route, bool trackMe) async {
     final databaseReference =
         FirebaseDatabase.instance.ref().child("users/${user?.uid}");
     Map<String, dynamic> updateValues = {
@@ -127,22 +128,22 @@ class Utils {
     setDistanceSettings(newDistance);
   }
 
-  Future<void> setUserInfo(String post, String phoneNumber, String displayName,
-      bool routeAccess) async {
+  Future<dynamic> registerUserForGoogleMap(String post, String phoneNumber, String email, String displayName,
+      String route, bool routeAccess, bool trackMe) async {
     final databaseReference =
         FirebaseDatabase.instance.ref().child("users/${user?.uid}");
     Map<String, dynamic> updateValues = {
       "post": post, //Student, Teacher, Principle
       "phone": phoneNumber,
-      "email": user?.email!,
+      "email": email,
       "name": displayName,
-      "distance":0,
-      "routeAccess": routeAccess, //'default'
+      "distance": 0,
+      "route": route,
+      "routeAccess": routeAccess,
+      "trackMe": trackMe, //'default'
     };
-    await databaseReference
-        .update(updateValues)
-        .then((_) {})
-        .catchError((error) {});
+    return await databaseReference
+        .update(updateValues);
   }
 
   Future<void> addLocations(latitude, longitude) async {
