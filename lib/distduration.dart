@@ -394,10 +394,13 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
                               child: Text(route),
                             );
                           }).toList(),
-                          onChanged: (value) {
+                          onChanged: (value) async {
                             _selectedRoute = value ?? '';
-                            Utils().setMyMapSettings(currentUserdata['image']??'',
+                            await Utils().setMyMapSettings(currentUserdata['image']??'',
                                 _selectedRoute, currentUserdata['trackMe']??true);
+                            Navigator.of(context).pushReplacement(MaterialPageRoute(
+                              builder: (context)=> const OrderTrackingPage(),
+                            ));
                             setState(() {
                             });
                           },
