@@ -277,6 +277,7 @@ class OrderTrackingPageState extends State<OrderTrackingPage> {
             currentLocationData!.latitude!, currentLocationData!.longitude!),
         PointLatLng(destination.latitude, destination.longitude));
     if (result.points.isNotEmpty) {
+      polylineCoordinates = [];
       result.points.forEach((PointLatLng point) {
         polylineCoordinates.add(LatLng(point.latitude, point.longitude));
       });
