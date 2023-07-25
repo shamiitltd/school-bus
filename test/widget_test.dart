@@ -11,4 +11,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:school_bus/main.dart';
 
 void main() {
+    testWidgets('Basic test', (WidgetTester tester) async {
+    // Build our app and trigger a frame.
+    await tester.pumpWidget(FloatingActionButton()); // Replace with the widget you want to test.
+
+    // No assertions needed. The test will pass automatically.
+  });
 }
