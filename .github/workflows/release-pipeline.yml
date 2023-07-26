@@ -18,7 +18,7 @@ env:
 
 jobs:
   code-analysis-and-testing:
-    if: false
+    if: true
     name: Code analysis and testing
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -43,7 +43,7 @@ jobs:
 
 
   android:
-    if: false
+    if: true
     name: Android CI/CD
     needs: code-analysis-and-testing
     runs-on: ubuntu-latest
@@ -186,7 +186,7 @@ jobs:
         rm -rf ~/.appstoreconnect/private_keys/
 
   web:
-    if: false
+    if: true
     name: Web CI/CD
     needs: code-analysis-and-testing
     runs-on: ubuntu-latest
