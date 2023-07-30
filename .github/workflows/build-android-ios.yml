@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build & Release
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -23,9 +23,9 @@ jobs:
         with:
           flutter-version: '3.7.7'
       - name: Set up Xcode
-        uses: actions/setup-xcode@v2
+        uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '13' # Specify the desired Xcode version
+          xcode-version: latest-stable
       - name: Flutter pub get
         run: flutter pub get
       - name: Flutter test
