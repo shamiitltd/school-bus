@@ -2,7 +2,7 @@
 name: Android and iOS Apk/IPA Release
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "build" ]
   pull_request:
     branches: [ "master" ]
   workflow_dispatch: # to manually run this workflow
@@ -39,10 +39,10 @@ jobs:
         with:
           artifacts: "build/app/outputs/apk/release/*"
           tag: v1.0.${{ github.run_number }}
-          token: ${{ secrets.CODE_ACCESS_TOKEN }}
+          token: ${{ secrets.SCHOOL_BUS_TOKEN }}
       - name: Push iOS artifacts to Releases
         uses: ncipollo/release-action@v1
         with:
           artifacts: "build/ios/iphoneos/*"
           tag: v1.0.${{ github.run_number }}
-          token: ${{ secrets.CODE_ACCESS_TOKEN }}
+          token: ${{ secrets.SCHOOL_BUS_TOKEN }}
