@@ -1,5 +1,5 @@
 
-name: Android and iOS Apk/IPA Release
+name: Build and Release IOS
 on:
   push:
     branches: [ "build" ]
@@ -30,13 +30,23 @@ jobs:
         run: flutter pub get
       - name: Flutter test
         run: flutter test
-      - name: Build Android app
-        run: flutter build apk --split-per-abi
-      - name: Build iOS app
-        run: flutter build ios --release --no-codesign
-      - name: Push Android and IOS artifacts to Releases
+      - run: |
+          cd ios
+          #rm podfile.lock
+          pod deintegrate
+          pod repo update
+          pod install
+      - run: |
+          flutter build ios --no-codesign
+          cd build/ios/iphoneos
+          mkdir Payload
+          cd Payload
+          ln -s ../Runner.app
+          cd ..
+          zip -r app.ipa Payload
+      - name: Push to Releases
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/app/outputs/apk/*/*.apk,build/ios/iphoneos/*"
-          tag: v1.0.${{ github.run_number }}.b
-          token: ${{ secrets.SCHOOL_BUS_TOKEN }}
+          artifacts: "build/ios/iphoneos/app.ipa"
+          tag: ios.v1.0.${{github.run_number}}
+          token: ${{secrets.SCHOOL_BUS_TOKEN}}
