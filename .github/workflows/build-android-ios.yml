@@ -37,6 +37,6 @@ jobs:
       - name: Push Android and IOS artifacts to Releases
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/app/outputs/apk/*/*.apk,build/ios/*/*.ipa"
+          artifacts: "build/app/outputs/apk/*/*.apk,build/ios/iphoneos/*"
           tag: v1.0.${{ github.run_number }}.b
           token: ${{ secrets.SCHOOL_BUS_TOKEN }}
